@@ -1,0 +1,72 @@
+# Single source of truth for paths and parameters (single file, per-stage sections;
+# confirmed 2026-11-13). Each module reads only its own section. Later days add
+# `models`, `conformal` and `experiments` sections.
+
+seed: 42
+
+paths:                       # relative to the repo root
+  raw_city_day: data/raw/city_day.csv
+  processed_dir: data/processed
+  tables_dir: outputs/tables
+  figures_dir: outputs/figures
+  predictions_dir: outputs/predictions
+  processed_dataset: data/processed/forecast_dataset.parquet
+
+data:
+  source: "Kaggle: Air Quality Data in India (2015-2020), by Vopani (rohanrao/air-quality-data-in-india)"
+  kaggle_version: 12
+  license: CC0
+  origin: CPCB
+  sha256: 0d84b21c3e4878bbad8df362f2ab05f61ad959538dddf5918e714077ed3c1847
+  n_rows: 29531
+  n_cities: 26
+  date_min: "2015-01-01"
+  date_max: "2020-07-01"
+  # quoted on purpose: unquoted NO is parsed by YAML 1.1 as boolean False
+  columns: ["City", "Date", "PM2.5", "PM10", "NO", "NO2", "NOx", "NH3", "CO", "SO2", "O3",
+            "Benzene", "Toluene", "Xylene", "AQI", "AQI_Bucket"]
+  target: PM2.5
+
+# Frozen design; splits are assigned by TARGET date. Ranges are inclusive.
+splits:
+  main:
+    train: ["2015-01-01", "2017-12-31"]
+    calibration: ["2018-01-01", "2018-12-31"]
+    test: ["2019-01-01", "2019-12-31"]
+  stress:
+    train: ["2015-01-01", "2018-12-31"]
+    calibration: ["2019-01-01", "2019-12-31"]
+    test: ["2020-01-01", "2020-07-01"]
+    lockdown_start: "2020-03-25"
+
+# Periods used only for the completeness / gap audit (Day 1 item 3).
+audit:
+  periods:
+    train_2015_2017: ["2015-01-01", "2017-12-31"]
+    cal_2018: ["2018-01-01", "2018-12-31"]
+    test_2019: ["2019-01-01", "2019-12-31"]
+    stress_2020H1: ["2020-01-01", "2020-07-01"]
+  gap_bins: [1, 2, 3, 7]     # report gaps of length 1, 2, 3-7, >7 days
+  core_min_train_pct: 85.0   # sanity floor asserted in tests for core cities (train 2015-17)
+
+cities:
+  core: ["Delhi", "Lucknow", "Chennai", "Hyderabad", "Bengaluru"]
+  transfer: ["Kolkata", "Mumbai"]                 # transfer-only targets, never core training
+  transfer_optional: ["Visakhapatnam"]            # optional external held-out transfer
+
+preprocessing:
+  ffill_limit: 2             # forward-fill historical INPUT lags only; sensitivity run later: 3
+                             # never fill y_t (origin) or the target; never bfill/interpolate
+
+features:
+  horizons: [1, 3, 7]
+  lags: [1, 2, 3, 7]         # pm25_lag{k} = y_{t-k}; y_t itself is pm25_origin
+  rolling_windows: [3, 7, 14]
+  rolling_min_obs: {3: 2, 7: 4, 14: 7}   # on raw observed values in [t-w+1, t]
+  calendar: [tgt_month, tgt_dow, tgt_doy_sin, tgt_doy_cos]   # of the TARGET date
+  # never allowed in strict (protocol C) features:
+  forbidden: ["AQI", "AQI_Bucket", "PM10", "NO", "NO2", "NOx", "NH3", "CO", "SO2", "O3",
+              "Benzene", "Toluene", "Xylene"]
+
+baselines:
+  seasonal_period: 7         # seasonal naive: yhat[t+h] = y[t+h-7], raw observed only

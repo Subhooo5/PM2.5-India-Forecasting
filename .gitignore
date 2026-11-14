@@ -1,0 +1,17 @@
+# Environment
+.venv/
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.pytest_cache/
+.DS_Store
+
+# Data: raw is immutable and never committed; processed is regenerated
+data/raw/*
+!data/raw/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# Predictions are large and regenerated
+outputs/predictions/*
+!outputs/predictions/.gitkeep

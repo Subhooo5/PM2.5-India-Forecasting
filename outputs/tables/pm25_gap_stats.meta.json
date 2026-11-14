@@ -1,0 +1,29 @@
+{
+  "file": "pm25_gap_stats.csv",
+  "dataset_sha256": "0d84b21c3e4878bbad8df362f2ab05f61ad959538dddf5918e714077ed3c1847",
+  "kaggle_dataset": "Kaggle: Air Quality Data in India (2015-2020), by Vopani (rohanrao/air-quality-data-in-india)",
+  "kaggle_version": 12,
+  "config_sha256": "7f6501b6b65b1d41fe3637c2e29f3aed5b1a6724418756d394b5de179f066869",
+  "generator": "src.data_audit.pm25_gap_stats",
+  "created_utc": "2026-11-13T18:07:02+00:00",
+  "n_rows": 26,
+  "columns": [
+    "City",
+    "leading_missing_days",
+    "trailing_missing_days",
+    "n_internal_gaps",
+    "internal_missing_days",
+    "gaps_len_1",
+    "gaps_len_2",
+    "gaps_len_3_7",
+    "gaps_len_gt7",
+    "longest_internal_gap",
+    "median_internal_gap",
+    "days_fillable_limit2",
+    "days_fillable_limit3"
+  ],
+  "seed": 42,
+  "notes": "Completeness measured against the full daily calendar 2015-01-01..2020-07-01 for every city.",
+  "git_commit": null,
+  "git_dirty": null
+}

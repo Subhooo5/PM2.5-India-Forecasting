@@ -1,0 +1,24 @@
+{
+  "file": "usable_samples_by_city_split_horizon.csv",
+  "dataset_sha256": "0d84b21c3e4878bbad8df362f2ab05f61ad959538dddf5918e714077ed3c1847",
+  "kaggle_dataset": "Kaggle: Air Quality Data in India (2015-2020), by Vopani (rohanrao/air-quality-data-in-india)",
+  "kaggle_version": 12,
+  "config_sha256": "7f6501b6b65b1d41fe3637c2e29f3aed5b1a6724418756d394b5de179f066869",
+  "generator": "src.features.usable_samples_table",
+  "created_utc": "2026-11-13T18:07:02+00:00",
+  "n_rows": 162,
+  "columns": [
+    "scheme",
+    "city",
+    "city_role",
+    "horizon",
+    "split",
+    "n_samples",
+    "n_eval_mask",
+    "stress_period"
+  ],
+  "seed": 42,
+  "notes": "Splits by target_date. n_eval_mask = common evaluation sample.",
+  "git_commit": null,
+  "git_dirty": null
+}
