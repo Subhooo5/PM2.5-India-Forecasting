@@ -142,7 +142,7 @@ def test_ffill_limit_is_respected(raw, cfg):
     s = city_daily_series(raw, "Visakhapatnam", cfg)   # has long gaps
     lim = cfg["preprocessing"]["ffill_limit"]
     filled = ffill_inputs(s, lim)
-    run = s.isna().groupby(s.notna().cumsum()).cumsum()  # position inside each NaN run
+    run = s.isna().astype("int64").groupby(s.notna().cumsum()).cumsum()  # position inside each NaN run
     assert filled[run > lim].isna().all()
     assert filled[(run >= 1) & (run <= lim) & (s.ffill().notna())].notna().all()
 

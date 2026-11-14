@@ -13,6 +13,11 @@ Non-feature columns: city_role, origin_date, target_date, horizon, y_target (raw
 filled), snaive_ref (= raw y[t+h-7], seasonal-naive input), eval_mask, split labels.
 
 Run:  python -m src.features      (verifies raw data, builds, exports parquet + audit tables)
+      python -m src.features rq1  (RQ1 A/B same-day estimation table; separate parquet)
+
+Named model-input sets live in config `feature_sets` (resolved by `feature_set`):
+same_day (RQ1 A/B only), causal_common (C, RQ2 primary, RQ3; no city ID),
+causal_city_aware (pooled-only ablation; unseen cities encoded as NaN by `encode_city`).
 """
 from __future__ import annotations
 
@@ -25,7 +30,7 @@ import pyarrow.parquet as pq
 
 from src import data_audit as da
 from src.preprocessing import city_daily_series, ffill_inputs, select_cities
-from src.splits import assign_splits
+from src.splits import assign_rq1_splits, assign_splits
 
 
 # ------------------------------------------------------------------ column sets
@@ -99,7 +104,7 @@ def build_city_samples(s_raw: pd.Series, city: str, cfg: dict) -> pd.DataFrame:
     for h in cfg["features"]["horizons"]:
         if not 1 <= h <= period:
             raise ValueError(f"horizon {h}: seasonal naive y[t+h-{period}] would not be causal")
-        target_date = X.index + pd.Timedelta(days=h)
+        target_date = pd.DatetimeIndex(X.index) + pd.Timedelta(days=h)
         part = X.reset_index(names="origin_date")
         part.insert(1, "target_date", target_date)
         part.insert(2, "horizon", np.int8(h))
@@ -120,8 +125,9 @@ def build_dataset(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     parts = [build_city_samples(city_daily_series(df, c, cfg), c, cfg) for c in roles]
     ds = pd.concat(parts, ignore_index=True)
     ds["city"] = pd.Categorical(ds["city"], categories=sorted(roles))
-    ds.insert(1, "city_role", pd.Categorical(ds["city"].map(roles).astype(str),
-                                             categories=["core", "transfer", "transfer_optional"]))
+    role = pd.Categorical(ds["city"].astype(str).map(roles),
+                          categories=["core", "transfer", "transfer_optional"])
+    ds.insert(1, "city_role", pd.Series(role, index=ds.index))
     ds = assign_splits(ds, cfg)
     first = ["city", "city_role", "origin_date", "target_date", "horizon"]
     feats = [c for c in strict_feature_columns(cfg) if c != "city"]
@@ -132,6 +138,54 @@ def build_dataset(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     if forbidden:
         raise AssertionError(f"forbidden columns in strict dataset: {forbidden}")
     return ds
+
+
+# ------------------------------------------------------------------ named feature sets
+def feature_set(cfg: dict, name: str) -> list[str]:
+    """Resolve a named model-input set from config `feature_sets` (supports `extends`)."""
+    spec = cfg["feature_sets"][name]
+    if isinstance(spec, dict):
+        cols = feature_set(cfg, spec["extends"]) + list(spec["add"])
+    else:
+        cols = list(spec)
+    if len(set(cols)) != len(cols):
+        raise ValueError(f"duplicate columns in feature set {name!r}")
+    return cols
+
+
+def encode_city(df: pd.DataFrame, train_cities: list[str]) -> pd.Series:
+    """City as categorical restricted to the TRAINING cities; any other city -> NaN (unseen).
+
+    Used only with the city-aware ablation, so a model can never look up a code for a
+    city it did not train on (e.g. transfer cities evaluated with the pooled model).
+    """
+    city = df["city"].astype(str)
+    return pd.Series(pd.Categorical(city.where(city.isin(train_cities)),
+                                    categories=sorted(train_cities)),
+                     index=df.index, name="city")
+
+
+# ------------------------------------------------------------------ RQ1 same-day table
+def build_same_day_dataset(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
+    """RQ1 protocols A and B: same-day estimation, exactly ONE row per (city, target_date).
+
+    y_target = PM2.5 on day d (observed only); inputs = same-day AQI + co-pollutants on d
+    (unfilled) + calendar features of d. No PM2.5 history, no AQI_Bucket.
+    """
+
+    tgt = cfg["data"]["target"]
+    cities = list(cfg["cities"][cfg["rq1"]["cities"]])
+    same_day_inputs = [c for c in feature_set(cfg, "same_day") if c not in cfg["features"]["calendar"]]
+    sub = df.loc[df["City"].isin(cities) & df[tgt].notna(), ["City", "Date", tgt, *same_day_inputs]]
+    sd = sub.rename(columns={"City": "city", "Date": "target_date", tgt: "y_target"})
+    sd = sd.sort_values(["city", "target_date"], ignore_index=True)
+    if sd.duplicated(["city", "target_date"]).any():
+        raise AssertionError("same-day dataset must have one row per (city, target_date)")
+    sd = pd.concat([sd, calendar_features(sd["target_date"])], axis=1)
+    sd["city"] = pd.Categorical(sd["city"], categories=sorted(cities))
+    sd = assign_rq1_splits(sd, cfg)
+    cols = ["city", "target_date", *feature_set(cfg, "same_day"), "y_target", "split_A", "split_B"]
+    return sd[cols]
 
 
 # ------------------------------------------------------------------ audit tables
@@ -164,21 +218,67 @@ def feature_missingness_table(ds: pd.DataFrame, cfg: dict) -> pd.DataFrame:
 
 
 # ------------------------------------------------------------------ export (item 9)
-def export_dataset(ds: pd.DataFrame, cfg: dict, path=None):
-    """Write the processed parquet with provenance in schema metadata + .meta.json sidecar."""
-    path = da.ROOT / cfg["paths"]["processed_dataset"] if path is None else path
+def write_parquet_with_provenance(df: pd.DataFrame, path, meta: dict):
+    """Parquet with provenance in schema metadata (key b'pm25_provenance') + .meta.json sidecar."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    meta = da.build_metadata(ds, path.name, cfg, "src.features.build_dataset",
-                             notes="Strict (protocol C) causal features; splits by target_date.")
-    meta.update(strict_features=strict_feature_columns(cfg),
-                features_config=cfg["features"], preprocessing_config=cfg["preprocessing"],
-                splits_config=cfg["splits"], cities=cfg["cities"])
-    table = pa.Table.from_pandas(ds, preserve_index=False)
+    table = pa.Table.from_pandas(df, preserve_index=False)
     table = table.replace_schema_metadata(
         {**(table.schema.metadata or {}), b"pm25_provenance": json.dumps(meta, default=str).encode()})
     pq.write_table(table, path)
     da.write_sidecar(meta, path)
     return path
+
+
+def export_dataset(ds: pd.DataFrame, cfg: dict, path=None):
+    """Write the processed forecasting parquet (protocol C / RQ2 / RQ3)."""
+    path = da.ROOT / cfg["paths"]["processed_dataset"] if path is None else path
+    meta = da.build_metadata(ds, path.name, cfg, "src.features.build_dataset",
+                             notes="Strict (protocol C) causal features; splits by target_date.")
+    meta.update(strict_features=strict_feature_columns(cfg),
+                features_config=cfg["features"], preprocessing_config=cfg["preprocessing"],
+                splits_config=cfg["splits"], cities=cfg["cities"])
+    return write_parquet_with_provenance(ds, path, meta)
+
+
+def export_same_day_dataset(sd: pd.DataFrame, cfg: dict, path=None):
+    """Write the RQ1 same-day estimation parquet (protocols A and B only)."""
+    path = da.ROOT / cfg["rq1"]["same_day_dataset"] if path is None else path
+    meta = da.build_metadata(sd, path.name, cfg, "src.features.build_same_day_dataset",
+                             notes="RQ1 A/B same-day estimation; one row per (city, target_date). "
+                                   "Contains same-day AQI/co-pollutants: NEVER use for protocol C.")
+    meta.update(same_day_features=feature_set(cfg, "same_day"), rq1_config=cfg["rq1"],
+                splits_config=cfg["splits"])
+    return write_parquet_with_provenance(sd, path, meta)
+
+
+def rq1_split_table(sd: pd.DataFrame) -> pd.DataFrame:
+    """Row counts per city x protocol x split label for the same-day dataset, plus each
+    split's share of the common A/B pool (train+test). A's test share is ~20% (rounded per
+    city); B's test share is the full 2019 year (~25-27%), so the proportions differ."""
+    parts = []
+    for p in ("A", "B"):
+        t = sd.groupby(["city", f"split_{p}"], observed=True).size().rename("n_rows").reset_index()
+        t = t.rename(columns={f"split_{p}": "split"}).assign(protocol=p)
+        t["split"] = t["split"].astype(str)
+        pool = t[t["split"].isin(["train", "test"])].groupby("city", observed=True)["n_rows"].sum()
+        in_pool = t["split"].isin(["train", "test"])
+        t["share_of_pool"] = np.where(in_pool, (t["n_rows"] / t["city"].map(pool).astype(float)).round(4), np.nan)
+        parts.append(t)
+    return pd.concat(parts, ignore_index=True)[["protocol", "city", "split", "n_rows", "share_of_pool"]]
+
+
+def run_rq1_dataset(cfg: dict | None = None) -> dict:
+    """Build + export the RQ1 same-day dataset (no model training)."""
+    cfg = cfg or da.load_config()
+    df = da.load_city_day(cfg)
+    da.verify_raw(df, cfg)
+    sd = build_same_day_dataset(df, cfg)
+    path = export_same_day_dataset(sd, cfg)
+    counts = rq1_split_table(sd)
+    da.write_table(counts, "rq1_same_day_split_counts", cfg, "src.features.rq1_split_table",
+                   notes="A: random 80/20 over unique city-dates (2015-17 + 2019), stratified by city. "
+                         "B: chronological. 2018 reserved for calibration.")
+    return {"dataset": sd, "path": path, "counts": counts}
 
 
 def run_day1(cfg: dict | None = None) -> dict:
@@ -197,8 +297,21 @@ def run_day1(cfg: dict | None = None) -> dict:
     return {"dataset": ds, "path": path, "usable": usable, "missingness": miss}
 
 
+def _main_rq1() -> None:
+    res = run_rq1_dataset()
+    sd = res["dataset"]
+    print(f"Wrote {res['path']} : {len(sd):,} rows x {sd.shape[1]} cols "
+          f"(unique city-dates: {not sd.duplicated(['city', 'target_date']).any()})")
+    print(res["counts"].pivot_table(index="city", columns=["protocol", "split"], values="n_rows",
+                                    observed=True).to_string())
+
+
 if __name__ == "__main__":
+    import sys
     pd.set_option("display.width", 200, "display.max_rows", 200)
+    if sys.argv[1:] == ["rq1"]:
+        _main_rq1()
+        sys.exit(0)
     res = run_day1()
     ds = res["dataset"]
     print(f"Wrote {res['path']} : {len(ds):,} rows x {ds.shape[1]} cols")

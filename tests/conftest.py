@@ -29,3 +29,9 @@ def ds(raw, cfg):
 def raw_lookup(raw):
     """Raw PM2.5 keyed by (City, Date) for exact alignment checks."""
     return raw.set_index(["City", "Date"])["PM2.5"]
+
+
+@pytest.fixture(scope="session")
+def same_day(raw, cfg):
+    from src.features import build_same_day_dataset
+    return build_same_day_dataset(raw, cfg)

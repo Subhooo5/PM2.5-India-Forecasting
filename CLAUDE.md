@@ -12,9 +12,44 @@ It is a **survey paper plus a small benchmark study**. We do NOT build a new ML 
 - **Protocol C:** chronological split plus strictly causal features. This is the genuine forecast.
 - B and C are **two different tasks**. Never describe the B→C gap as the isolated causal effect of removing co-pollutants.
 
+**Final RQ1 protocol definition (confirmed 2026-11-14):**
+
+| | Task | Dataset (unit) | Inputs | Split |
+|---|---|---|---|---|
+| A | same-day estimation of PM2.5 on day d (invalid demo) | `rq1_same_day_dataset.parquet`, one row per (city, target_date) | same-day AQI + 11 co-pollutants + calendar(d) | random 80/20 over unique city-dates, stratified by city, seed from YAML; pool = target dates in 2015–2017 ∪ 2019; 2018 excluded |
+| B | same-day estimation | same table, same rows | identical to A | chronological: train 2015–2017, test 2019; 2018 reserved, unused |
+| C | genuine forecast, h = 1, 3, 7 (direct) | `forecast_dataset.parquet`, one row per (city, origin, h) | `causal_common` (city-ID-free) | chronological by target date: train 2015–2017, test 2019 |
+
+- Cities: the core five, pooled. AQI_Bucket is never used, since it's a binning of AQI. Same-day inputs are not filled; NaNs go to LightGBM.
+- **A vs B** use the *same city-date pool* (2015–2017 ∪ 2019), so their gap estimates *split-induced inflation*. Split type is **not** the only difference, though:
+  1. **Assignment:** A is random; B is chronological.
+  2. **Test proportion:** A tests on ≈20% of each city's pool, which is exact up to rounding per city. B's test is the full 2019 year, ≈25–27% of the pool (Delhi 25.0%, Lucknow 26.9%, Chennai 27.2%, Hyderabad 27.2%, Bengaluru 27.4%), so B also trains on ≈6–9% fewer city-dates.
+  3. **Test period:** A's test rows are spread across 2015–2017 and 2019, while B's are all in 2019.
+  - Report A vs B with this qualification (`outputs/tables/rq1_same_day_split_counts.csv` has the shares). Never say the split type is the sole difference.
+- **B vs C** compares *same-day estimation with a chronological split* against *genuine forecasting*. These are two different tasks, scored on the common set of 2019 (city, target_date) pairs where both B has a row and C's `eval_mask` holds at that h. Full-set numbers are also reported. Never attribute the gap to co-pollutants alone.
+- The random split must never be applied to the three-horizon long table. Identical (city, target_date) targets occur there under several horizons, and `random_split_unique` raises on duplicates.
+- Under A, the same calendar date can appear in train for one city and in test for another city. That is part of what A demonstrates; the (city, date) pairs themselves never overlap.
+
+### Model validation (revised 2026-11-14, superseding the earlier "fixed" choice)
+- 2018 is used only for CQR calibration. 2019 is used only for final testing. Neither is ever used for hyperparameter selection.
+- **Selection:** expanding-window CV with a small predeclared grid (`tuning.grid`).
+  - Two folds by target date: train 2015 → validate 2016, then train 2015–2016 → validate 2017.
+  - Score: validation MAE, averaged over folds and horizons.
+  - Selection data: protocol C, core cities, `causal_common`, h = 1, 3, 7.
+  - `assert_training_only` guards every row a fit or prediction touches.
+- **Refit:** the selected parameters are refit on all of 2015–2017 (`split_main == train`).
+- **Reuse:** one selected parameter set is stored in `outputs/tables/lightgbm_selected_params.json` and reused everywhere: RQ1 A/B/C, RQ2, and the RQ3 quantile models via `quantile_params`.
+- No early stopping.
+- The grid values and selection scope are **proposed** (`tuning.status`) until the user freezes them.
+
 ### RQ2 — Cross-city
 - Pooled vs per-city vs leave-one-city-out (zero-shot).
 - City ID is categorical. The held-out city is treated as unseen, or city ID is omitted.
+- **Feature sets (confirmed 2026-11-14):**
+  - The primary comparison uses `causal_common`, which has no city ID, for pooled, per-city and LOCO alike.
+  - `causal_city_aware` (causal_common + city) is an optional ablation for the **pooled** model only. LOCO refuses it.
+  - Any city absent from training is encoded as an explicit unseen value (NaN; categories = training cities only) by `encode_city`.
+  - LOCO training partitions contain zero rows from the held-out city. Transfer cities are never in training.
 
 ### RQ3 — Uncertainty
 - Quantile LightGBM (0.05 / 0.95) vs CQR (calibrated on 2018) vs CQR+ACI.
@@ -89,9 +124,9 @@ data/processed/           derived parquet (git-ignored)
 notebooks/01_eda.ipynb    EDA (kernel "pm25")
 src/data_audit.py         Day 1 items 1–3: config load, sha256, load, verify, completeness/gap reports, table+metadata writer
 src/preprocessing.py      Day 1: city selection/roles, daily calendar series, input ffill (limit 2)
-src/features.py           Day 1: causal features h = 1,3,7, dataset build, export, sample tables
-src/splits.py             Day 1: target-date splits (main, stress + lockdown periods)
-src/models.py             baselines (Day 1 item 8); LightGBM later (RQ1–3)
+src/features.py           causal features h = 1,3,7, named feature sets, RQ1 same-day table, encode_city, exports
+src/splits.py             target-date splits, RQ1 A/B splits, B-vs-C common index, tuning guard + expanding folds, LOCO
+src/models.py             baselines (Day 1 item 8), fixed lightgbm_params; LightGBM training later (RQ1–3)
 src/conformal.py          later: CQR, CQR+ACI (RQ3)
 src/metrics.py            later: point and interval metrics, breakdowns
 src/experiments.py        later: protocol A/B/C, cross-city, uncertainty runners
@@ -104,6 +139,7 @@ outputs/tables|figures|predictions/
 source .venv/bin/activate
 python -m src.data_audit            # Day 1 items 1–3: verify raw data, write audit tables
 python -m src.features              # Day 1 items 4–9: build + export processed parquet and sample tables
+python -m src.features rq1          # RQ1 A/B same-day table -> data/processed/rq1_same_day_dataset.parquet
 pytest -q                           # all tests
 jupyter lab                         # pick kernel "Python (pm25)"
 shasum -a 256 data/raw/city_day.csv # must equal frozen sha256
@@ -122,7 +158,21 @@ shasum -a 256 data/raw/city_day.csv # must equal frozen sha256
 | 8 | Implement persistence and seasonal-naive baselines | ✅ 2026-11-13 | `src/models.py`; `tests/test_baselines_export.py` (common `eval_mask`) |
 | 9 | Export processed dataset and audit report | ✅ 2026-11-13 | `python -m src.features` → data/processed/forecast_dataset.parquet (+ provenance), outputs/tables/usable_samples_*, feature_missingness_*; export round-trip test |
 
-**Day 1 complete (52 tests pass).** Do NOT start Day 2 until the user says so.
+**Day 1 complete** (committed 31a4836). Do NOT start Day 2 until the user says so.
+
+### Pre-Day-2 fixes (2026-11-14), not yet committed and awaiting user review
+| Item | Status | Verified by |
+|---|---|---|
+| RQ1 same-day table (one row per city-date), A random-unique / B chronological | ✅ | `tests/test_rq1.py` |
+| RQ1 documentation: A ≈20% vs B full-2019 (≈25–27%) test shares; same pool | ✅ | CLAUDE.md §1; `rq1_same_day_split_counts.csv` (`share_of_pool`) |
+| Hyperparameter rule: expanding-window CV, predeclared grid, val MAE, refit 2015–2017, one reused set | ✅ code; ☐ grid/scope freeze | `tests/test_validation_rule.py` (spy model, no training) |
+| LightGBM params: subsample_freq 1, bagging_seed 42, deterministic + force_col_wise | ✅ | `tests/test_lightgbm_params.py` |
+| Return types: `lightgbm_params` / `ffill_inputs` / `baseline_predictions` (no trailing commas found) | ✅ | `tests/test_return_types.py`, `tests/test_lightgbm_params.py` |
+| RQ2 common feature sets, LOCO isolation, unseen-city encoding | ✅ | `tests/test_rq2_features.py` |
+| Pylance issues (features.py, test_features.py, splits.py, test_rq1.py) | ✅ code changed | pyright not run (CLI permission denied); confirm in editor |
+| Hyperparameter selection actually run | ☐ not run (counts as training; waits for Day 2 go-ahead) | |
+
+Total: 102 tests pass, 0 warnings.
 
 Setup: ✅ scaffold · ✅ venv (Py 3.11) + pinned requirements · ✅ imports verified (all 13) · ✅ Jupyter kernel `pm25` · ✅ git init · ☐ initial git commit (awaiting user approval of skeleton)
 
@@ -147,6 +197,15 @@ Known gotcha: in YAML, quote column names — unquoted `NO` parses as boolean Fa
 | Common evaluation sample | `eval_mask` = target observed AND y_t observed AND raw y[t+h-7] observed; all models and baselines are scored on exactly this mask | 2026-11-13 | yes |
 | Outliers | No treatment; keep CPCB values as reported | 2026-11-13 | yes |
 | Config structure | Single `configs/experiments.yaml` with per-stage sections | 2026-11-13 | yes |
+| Initial commit | Day 1 state committed as approved (31a4836) before pre-Day-2 changes | 2026-11-14 | yes ("Day 1 is approved") |
+| RQ1 A/B dataset | Separate same-day table, one row per (city, target_date), core five; never random-split the long table | 2026-11-14 | yes |
+| RQ1 A pool | Random 80/20 stratified by city over target dates 2015–2017 ∪ 2019 (same pool as B), 2018 excluded | 2026-11-14 | yes |
+| RQ1 A/B inputs | Same-day AQI + PM10, NO, NO2, NOx, NH3, CO, SO2, O3, Benzene, Toluene, Xylene + calendar; no AQI_Bucket; no fill | 2026-11-14 | yes |
+| B vs C scoring | Common (city, target_date) set in 2019 (B row ∧ C eval_mask at h); full sets also reported | 2026-11-14 | yes |
+| Hyperparameters (superseded) | ~~Predeclared fixed LightGBM params~~ | 2026-11-14 | yes, then replaced |
+| Hyperparameters | Expanding-window CV (2015→2016, 2015–16→2017), small predeclared grid, validation MAE, refit 2015–2017, one selected set reused across all experiments; 2018/2019 never used | 2026-11-14 | yes (user instruction; grid + selection scope proposed, pending freeze) |
+| LightGBM base params | subsample 0.8 with subsample_freq 1 (bagging active), bagging_seed 42, deterministic + force_col_wise | 2026-11-14 | yes |
+| RQ2 feature sets | Primary `causal_common` (no city ID); `causal_city_aware` = pooled-only ablation; unseen city → NaN | 2026-11-14 | yes |
 
 ## 8. Open decisions (ask the user before the day that needs them)
 - Top-10% threshold for transfer cities: Kolkata/Mumbai have no 2015–17 data, so a "training-period" threshold is undefined in the main scheme. Needed on the metrics day.
