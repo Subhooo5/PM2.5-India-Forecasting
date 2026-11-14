@@ -30,17 +30,22 @@ It is a **survey paper plus a small benchmark study**. We do NOT build a new ML 
 - The random split must never be applied to the three-horizon long table. Identical (city, target_date) targets occur there under several horizons, and `random_split_unique` raises on duplicates.
 - Under A, the same calendar date can appear in train for one city and in test for another city. That is part of what A demonstrates; the (city, date) pairs themselves never overlap.
 
-### Model validation (revised 2026-11-14, superseding the earlier "fixed" choice)
-- 2018 is used only for CQR calibration. 2019 is used only for final testing. Neither is ever used for hyperparameter selection.
-- **Selection:** expanding-window CV with a small predeclared grid (`tuning.grid`).
-  - Two folds by target date: train 2015 → validate 2016, then train 2015–2016 → validate 2017.
-  - Score: validation MAE, averaged over folds and horizons.
-  - Selection data: protocol C, core cities, `causal_common`, h = 1, 3, 7.
-  - `assert_training_only` guards every row a fit or prediction touches.
-- **Refit:** the selected parameters are refit on all of 2015–2017 (`split_main == train`).
-- **Reuse:** one selected parameter set is stored in `outputs/tables/lightgbm_selected_params.json` and reused everywhere: RQ1 A/B/C, RQ2, and the RQ3 quantile models via `quantile_params`.
-- No early stopping.
-- The grid values and selection scope are **proposed** (`tuning.status`) until the user freezes them.
+### Model validation (frozen 2026-11-14, Day 2 task 1)
+- 2018 is used only for CQR calibration. 2019 is used only for final testing. Neither is ever read into a tuning frame.
+- **LightGBM base** (`lightgbm.base`, all point models):
+  - objective regression, n_estimators 500, learning_rate 0.05;
+  - subsample 0.8 with subsample_freq 1, colsample_bytree 0.8, reg_lambda 1.0;
+  - bagging_seed = random_state = 42, n_jobs 1, deterministic, force_col_wise, verbosity -1.
+  - **No early stopping**: no callback or eval set anywhere.
+- **Grid** (`lightgbm.grid.candidates`, fixed order = tie-break order): c1–c6 = num_leaves {15, 31, 63} (outer) × min_child_samples {20, 50} (inner).
+- **Tuning** (`tuning`):
+  - Two expanding folds by target year: 2015 → 2016, then 2015–2016 → 2017.
+  - h = 1, 3, 7; `causal_common`; the five core cities; scored on `eval_mask` rows.
+  - Score: mean validation MAE over 2 folds × 3 horizons. Ties go to the earliest candidate.
+  - Hard guard: `max_allowed_target_date` 2017-12-31.
+  - `src/experiments.py::run_tuning`; outputs in `outputs/models/`.
+- **Selected:** written once to `lightgbm.selected` (the only YAML edit allowed after the freeze). `lightgbm_params(cfg)` = base + selected, reused by every experiment. RQ3 changes only objective/alpha (`quantile_params`).
+- **Refit:** all 2015–2017 rows (`final_training_rows`).
 
 ### RQ2 — Cross-city
 - Pooled vs per-city vs leave-one-city-out (zero-shot).
@@ -126,12 +131,12 @@ src/data_audit.py         Day 1 items 1–3: config load, sha256, load, verify, 
 src/preprocessing.py      Day 1: city selection/roles, daily calendar series, input ffill (limit 2)
 src/features.py           causal features h = 1,3,7, named feature sets, RQ1 same-day table, encode_city, exports
 src/splits.py             target-date splits, RQ1 A/B splits, B-vs-C common index, tuning guard + expanding folds, LOCO
-src/models.py             baselines (Day 1 item 8), fixed lightgbm_params; LightGBM training later (RQ1–3)
+src/models.py             baselines (Day 1 item 8), frozen LightGBM params (base/grid/selected), fit/predict pipeline (Day 2 task 3)
 src/conformal.py          later: CQR, CQR+ACI (RQ3)
 src/metrics.py            later: point and interval metrics, breakdowns
 src/experiments.py        later: protocol A/B/C, cross-city, uncertainty runners
 tests/                    executable verification (data audit, features/causality, splits, baselines/export)
-outputs/tables|figures|predictions/
+outputs/tables|figures|predictions|models/   (models/ = tuning results, selected params, saved models)
 ```
 
 ## 5. Run commands
@@ -174,7 +179,17 @@ shasum -a 256 data/raw/city_day.csv # must equal frozen sha256
 
 Total: 102 tests pass, 0 warnings.
 
-Setup: ✅ scaffold · ✅ venv (Py 3.11) + pinned requirements · ✅ imports verified (all 13) · ✅ Jupyter kernel `pm25` · ✅ git init · ☐ initial git commit (awaiting user approval of skeleton)
+Setup: ✅ scaffold · ✅ venv (Py 3.11) + pinned requirements · ✅ imports verified (all 13) · ✅ Jupyter kernel `pm25` · ✅ git init · ✅ initial commit 31a4836
+
+## 6b. Day 2 checklist (live status). Iteration 1 = tasks 1–3 only
+| # | Task | Status | Verified by |
+|---|------|--------|-------------|
+| 1 | Freeze LightGBM config and experiment settings (YAML) | ✅ 2026-11-14 | YAML loads; `tests/test_lightgbm_params.py`, `tests/test_validation_rule.py`; commit "Day 2 task 1: …" made before any tuning |
+| 2 | Expanding-window hyperparameter selection (`run_tuning`) | ☐ | |
+| 3 | Shared LightGBM training pipeline (`src/models.py`, `src/metrics.py`) | ☐ | |
+| 4–9 | Not started; do not begin without the user's go-ahead | ☐ | |
+
+Iteration 1 scope: NO protocol A/B/C models, NO RQ1/RQ2 runs, NO baseline scoring, NO quantile/CQR/ACI/intervals, NO 2020 stress test. Never read, tune on or score any row with target_date ≥ 2018-01-01 in tuning.
 
 Known gotcha: in YAML, quote column names — unquoted `NO` parses as boolean False (caught by `verify_raw`).
 
@@ -206,6 +221,11 @@ Known gotcha: in YAML, quote column names — unquoted `NO` parses as boolean Fa
 | Hyperparameters | Expanding-window CV (2015→2016, 2015–16→2017), small predeclared grid, validation MAE, refit 2015–2017, one selected set reused across all experiments; 2018/2019 never used | 2026-11-14 | yes (user instruction; grid + selection scope proposed, pending freeze) |
 | LightGBM base params | subsample 0.8 with subsample_freq 1 (bagging active), bagging_seed 42, deterministic + force_col_wise | 2026-11-14 | yes |
 | RQ2 feature sets | Primary `causal_common` (no city ID); `causal_city_aware` = pooled-only ablation; unseen city → NaN | 2026-11-14 | yes |
+| Pre-Day-2 batch | Committed by the user as 6dd5a7c ("day 1") | 2026-11-14 | yes (user commit) |
+| Day 2 config keys | Migrate to the Day 2 spec names: `lightgbm.base/grid/selected`, `tuning.folds` (train_targets/validate_targets), `tuning.max_allowed_target_date`, `feature_sets.same_day_estimation`. Old `models.lightgbm` / `tuning.grid|expanding_cv_folds|allowed_target_range` / `same_day` removed; existing functions keep their names but read the new keys | 2026-11-14 | yes |
+| `causal_common` (frozen) | 19 columns: pm25_origin + lags 1,2,3,7 + 4 lag-imputed flags + rolling mean/std 3,7,14 + 4 target-date calendar features; no city, no AQI/co-pollutants (keeps the Day 1 decisions) | 2026-11-14 | yes |
+| predict column check | Strict on the feature block: `predict_lgbm` builds X from the stored feature list in stored order, raises on missing features or a booster whose names/order differ from the stored list / YAML set; `validate_feature_frame` raises on missing/extra/reordered for explicit matrices | 2026-11-14 | yes |
+| CLAUDE.md in git | Keep tracking (user's `/CLAUDE.md` .gitignore line left as-is; no effect on a tracked file); updates go into each task commit | 2026-11-14 | yes |
 
 ## 8. Open decisions (ask the user before the day that needs them)
 - Top-10% threshold for transfer cities: Kolkata/Mumbai have no 2015–17 data, so a "training-period" threshold is undefined in the main scheme. Needed on the metrics day.

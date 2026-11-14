@@ -16,7 +16,7 @@ def test_causal_sets_exclude_forbidden_and_same_day_is_isolated(cfg, ds):
     for name in ("causal_common", "causal_city_aware"):
         assert set(F.feature_set(cfg, name)).isdisjoint(forbidden)
     assert "city" not in F.feature_set(cfg, "causal_common")
-    same_day_only = set(F.feature_set(cfg, "same_day")) - set(cfg["features"]["calendar"])
+    same_day_only = set(F.feature_set(cfg, "same_day_estimation")) - set(cfg["features"]["calendar"])
     assert same_day_only <= forbidden                 # A/B inputs are exactly the forbidden ones
     assert same_day_only.isdisjoint(ds.columns)       # and never enter the forecasting table
     assert set(F.feature_set(cfg, "causal_city_aware")) <= set(ds.columns)

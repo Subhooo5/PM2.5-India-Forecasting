@@ -1,36 +1,58 @@
-"""LightGBM parameter checks: return types (item 1) and subsampling / determinism (item 5).
-No model is trained here; LGBMRegressor is only constructed."""
+"""LightGBM parameter checks (frozen Day 2 config): return types, grid order,
+subsampling actually enabled, determinism. No model is trained here."""
 import lightgbm as lgb
 import pytest
 
 from src import models as M
 
 
-@pytest.fixture
-def fixed_cfg(cfg):
-    return {**cfg, "tuning": {**cfg["tuning"], "mode": "fixed"}}
+def _with_selected(cfg, cand):
+    return {**cfg, "lightgbm": {**cfg["lightgbm"], "selected": cand}}
 
 
-# ---------------------------------------------------------------- item 1: return type
-def test_lightgbm_params_returns_dict_not_tuple(fixed_cfg, ds, cfg, tmp_path, monkeypatch):
-    out = M.lightgbm_params(fixed_cfg)
-    assert type(out) is dict and not isinstance(out, tuple)
-    monkeypatch.setattr(M.da, "write_table", lambda *a, **k: None)
-    best, table = M.select_hyperparameters(
-        ds, cfg, fit_predict=lambda p, Xt, yt, Xv: ds.loc[Xv.index, "y_target"].to_numpy())
-    path = M.save_selected_params(best, table, cfg, tmp_path / "sel.json")
-    tuned = M.lightgbm_params(cfg, path)
-    assert type(tuned) is dict and not isinstance(tuned, tuple)
-    assert type(M.quantile_params(cfg, 0.05, path)) is dict
-    assert type(M.base_params(cfg)) is dict
-    assert all(type(c) is dict for c in M.candidate_params(cfg))
-
-
-# ---------------------------------------------------------------- item 5: subsampling
 def _all_param_sets(cfg):
-    return [M.base_params(cfg), *M.candidate_params(cfg)]
+    return [M.base_params(cfg), *(M.merge_params(cfg, c) for c in M.candidate_params(cfg))]
 
 
+# ---------------------------------------------------------------- return types
+def test_param_functions_return_dicts_not_tuples(cfg):
+    c = _with_selected(cfg, M.candidate_params(cfg)[0])
+    for out in (M.base_params(cfg), M.lightgbm_params(c), M.quantile_params(c, 0.05),
+                M.merge_params(cfg, M.candidate_params(cfg)[0])):
+        assert type(out) is dict and not isinstance(out, tuple)
+    assert type(M.candidate_params(cfg)) is list
+    assert all(type(x) is dict for x in M.candidate_params(cfg))
+
+
+# ---------------------------------------------------------------- frozen base + grid
+def test_base_matches_frozen_spec(cfg):
+    assert M.base_params(cfg) == {
+        "objective": "regression", "n_estimators": 500, "learning_rate": 0.05,
+        "subsample": 0.8, "subsample_freq": 1, "colsample_bytree": 0.8, "reg_lambda": 1.0,
+        "bagging_seed": 42, "random_state": 42, "n_jobs": 1, "deterministic": True,
+        "force_col_wise": True, "verbosity": -1}
+    assert cfg["seed"] == 42 and cfg["lightgbm"]["early_stopping"] is False
+
+
+def test_grid_has_six_candidates_in_fixed_order(cfg):
+    assert M.candidate_params(cfg) == [
+        {"candidate_id": "c1", "num_leaves": 15, "min_child_samples": 20},
+        {"candidate_id": "c2", "num_leaves": 15, "min_child_samples": 50},
+        {"candidate_id": "c3", "num_leaves": 31, "min_child_samples": 20},
+        {"candidate_id": "c4", "num_leaves": 31, "min_child_samples": 50},
+        {"candidate_id": "c5", "num_leaves": 63, "min_child_samples": 20},
+        {"candidate_id": "c6", "num_leaves": 63, "min_child_samples": 50}]
+
+
+def test_grid_order_is_enforced(cfg):
+    g = cfg["lightgbm"]["grid"]
+    swapped = [g["candidates"][1], g["candidates"][0], *g["candidates"][2:]]
+    bad = {**cfg, "lightgbm": {**cfg["lightgbm"], "grid": {**g, "candidates": swapped}}}
+    with pytest.raises(ValueError, match="enumerate"):
+        M.candidate_params(bad)
+
+
+# ---------------------------------------------------------------- subsampling / determinism
 def test_subsampling_is_actually_enabled(cfg):
     for p in _all_param_sets(cfg):
         assert 0 < p["subsample"] < 1
@@ -43,27 +65,25 @@ def test_deterministic_settings_present(cfg):
         assert p["deterministic"] is True
         assert p["force_col_wise"] is True
         assert p["bagging_seed"] == cfg["seed"] == p["random_state"]
-        assert p["n_jobs"] == 1
+        assert p["n_jobs"] == 1 and p["verbosity"] == -1
 
 
-def test_bagging_seed_must_match_seed(cfg):
-    lgbm = cfg["models"]["lightgbm"]
-    bad = {**cfg, "models": {"lightgbm": {**lgbm, "params": {**lgbm["params"], "bagging_seed": 7}}}}
-    with pytest.raises(ValueError, match="bagging_seed"):
+@pytest.mark.parametrize("key", ["bagging_seed", "random_state"])
+def test_seeds_must_match_top_level_seed(cfg, key):
+    lgbm = cfg["lightgbm"]
+    bad = {**cfg, "lightgbm": {**lgbm, "base": {**lgbm["base"], key: 7}}}
+    with pytest.raises(ValueError, match=key):
         M.base_params(bad)
 
 
 def test_early_stopping_disabled(cfg):
-    assert cfg["models"]["lightgbm"]["early_stopping"] is False
-    lgbm = {**cfg["models"]["lightgbm"], "early_stopping": True}
     with pytest.raises(ValueError):
-        M.base_params({**cfg, "models": {"lightgbm": lgbm}})
+        M.base_params({**cfg, "lightgbm": {**cfg["lightgbm"], "early_stopping": True}})
 
 
 def test_lightgbm_accepts_the_parameters(cfg):
     """Constructing (not fitting) the estimator: every key reaches LightGBM unchanged."""
     for p in _all_param_sets(cfg):
         got = lgb.LGBMRegressor(**p).get_params()
-        for k in ("subsample", "subsample_freq", "bagging_seed", "deterministic",
-                  "force_col_wise", "random_state", "num_leaves", "min_child_samples"):
-            assert got[k] == p[k], k
+        for k, v in p.items():
+            assert got[k] == v, k

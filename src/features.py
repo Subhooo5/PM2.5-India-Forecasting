@@ -16,7 +16,7 @@ Run:  python -m src.features      (verifies raw data, builds, exports parquet + 
       python -m src.features rq1  (RQ1 A/B same-day estimation table; separate parquet)
 
 Named model-input sets live in config `feature_sets` (resolved by `feature_set`):
-same_day (RQ1 A/B only), causal_common (C, RQ2 primary, RQ3; no city ID),
+same_day_estimation (RQ1 A/B only), causal_common (C, RQ2 primary, RQ3; no city ID),
 causal_city_aware (pooled-only ablation; unseen cities encoded as NaN by `encode_city`).
 """
 from __future__ import annotations
@@ -175,7 +175,7 @@ def build_same_day_dataset(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
 
     tgt = cfg["data"]["target"]
     cities = list(cfg["cities"][cfg["rq1"]["cities"]])
-    same_day_inputs = [c for c in feature_set(cfg, "same_day") if c not in cfg["features"]["calendar"]]
+    same_day_inputs = [c for c in feature_set(cfg, "same_day_estimation") if c not in cfg["features"]["calendar"]]
     sub = df.loc[df["City"].isin(cities) & df[tgt].notna(), ["City", "Date", tgt, *same_day_inputs]]
     sd = sub.rename(columns={"City": "city", "Date": "target_date", tgt: "y_target"})
     sd = sd.sort_values(["city", "target_date"], ignore_index=True)
@@ -184,7 +184,7 @@ def build_same_day_dataset(df: pd.DataFrame, cfg: dict) -> pd.DataFrame:
     sd = pd.concat([sd, calendar_features(sd["target_date"])], axis=1)
     sd["city"] = pd.Categorical(sd["city"], categories=sorted(cities))
     sd = assign_rq1_splits(sd, cfg)
-    cols = ["city", "target_date", *feature_set(cfg, "same_day"), "y_target", "split_A", "split_B"]
+    cols = ["city", "target_date", *feature_set(cfg, "same_day_estimation"), "y_target", "split_A", "split_B"]
     return sd[cols]
 
 
@@ -246,7 +246,7 @@ def export_same_day_dataset(sd: pd.DataFrame, cfg: dict, path=None):
     meta = da.build_metadata(sd, path.name, cfg, "src.features.build_same_day_dataset",
                              notes="RQ1 A/B same-day estimation; one row per (city, target_date). "
                                    "Contains same-day AQI/co-pollutants: NEVER use for protocol C.")
-    meta.update(same_day_features=feature_set(cfg, "same_day"), rq1_config=cfg["rq1"],
+    meta.update(same_day_features=feature_set(cfg, "same_day_estimation"), rq1_config=cfg["rq1"],
                 splits_config=cfg["splits"])
     return write_parquet_with_provenance(sd, path, meta)
 

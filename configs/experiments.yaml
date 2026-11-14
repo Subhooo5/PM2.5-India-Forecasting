@@ -72,22 +72,27 @@ baselines:
   seasonal_period: 7         # seasonal naive: yhat[t+h] = y[t+h-7], raw observed only
 
 # ---------------------------------------------------------------------------------
-# Pre-Day-2 additions (confirmed 2026-11-14). No model is trained by Day 1 code.
+# Day 2 (frozen 2026-11-14, Day 2 task 1). Sections above are Day 1 and unchanged.
+# Every comparable experiment uses identical settings: protocols and RQs reuse
+# lightgbm.selected (written once by task 2) and change nothing but the objective /
+# quantile alpha for RQ3.
 # ---------------------------------------------------------------------------------
 
-# Named model-input sets. Every experiment selects one of these by name.
+# Named model-input sets (existing Day 1 column names). Every experiment selects one by name.
 feature_sets:
-  # RQ1 protocols A and B ONLY (same-day estimation; intentionally non-causal inputs)
-  same_day: ["AQI", "PM10", "NO", "NO2", "NOx", "NH3", "CO", "SO2", "O3",
-             "Benzene", "Toluene", "Xylene",
-             "tgt_month", "tgt_dow", "tgt_doy_sin", "tgt_doy_cos"]
-  # Protocol C, RQ2 primary (pooled / per-city / LOCO), RQ3. City-ID-free.
+  # Protocol C, RQ2 primary (pooled / per-city / LOCO), RQ3, tuning. No city ID, no AQI /
+  # AQI_Bucket / co-pollutants. Lags + imputed flags + rolling stats over [t-w+1, t] + calendar(target).
   causal_common: ["pm25_origin", "pm25_lag1", "pm25_lag2", "pm25_lag3", "pm25_lag7",
                   "pm25_lag1_imputed", "pm25_lag2_imputed", "pm25_lag3_imputed", "pm25_lag7_imputed",
                   "pm25_rmean3", "pm25_rstd3", "pm25_rmean7", "pm25_rstd7",
                   "pm25_rmean14", "pm25_rstd14",
                   "tgt_month", "tgt_dow", "tgt_doy_sin", "tgt_doy_cos"]
-  # Optional ablation: pooled model only, never LOCO. Unseen cities -> NaN.
+  # RQ1 protocols A and B ONLY: same-day AQI + 11 co-pollutants + calendar of date d.
+  # No AQI_Bucket, no city ID, no PM2.5 lags, no imputation.
+  same_day_estimation: ["AQI", "PM10", "NO", "NO2", "NOx", "NH3", "CO", "SO2", "O3",
+                        "Benzene", "Toluene", "Xylene",
+                        "tgt_month", "tgt_dow", "tgt_doy_sin", "tgt_doy_cos"]
+  # Ablation (pooled only; never LOCO). Defined, not used in Day 2 iteration 1.
   causal_city_aware: {extends: causal_common, add: ["city"]}
 
 rq1:
@@ -95,14 +100,14 @@ rq1:
   same_day_dataset: data/processed/rq1_same_day_dataset.parquet
   protocol_A:
     task: same_day_estimation
-    feature_set: same_day
+    feature_set: same_day_estimation
     split: random_unique_city_date
     pool_target_years: [2015, 2016, 2017, 2019]   # = B's train + test; 2018 reserved for CQR
-    test_frac: 0.20
+    test_frac: 0.20                               # ~20% per city (rounded); B's test is all of 2019
     stratify_by: city
   protocol_B:
     task: same_day_estimation
-    feature_set: same_day
+    feature_set: same_day_estimation
     split: chronological            # train 2015-2017, test 2019 (splits.main); 2018 unused
   protocol_C:
     task: forecast
@@ -118,45 +123,51 @@ rq2:
   loco_held_out: core                       # rotate over each core city (train on the other 4)
   transfer_eval: [transfer, transfer_optional]   # trained on all core cities, never trained on
 
-# Hyperparameter rule (revised 2026-11-14): expanding-window CV over a small predeclared
-# grid, strictly inside 2015-2017 by target date. 2018 (calibration) and 2019 (test) are
-# never used for any choice. One selected set is reused by every experiment.
-tuning:
-  mode: expanding_cv               # expanding_cv | fixed
-  status: proposed                 # grid + selection scope become 'frozen' on user approval
-  allowed_target_range: ["2015-01-01", "2017-12-31"]
-  expanding_cv_folds:
-    - {train: ["2015-01-01", "2015-12-31"], valid: ["2016-01-01", "2016-12-31"]}
-    - {train: ["2015-01-01", "2016-12-31"], valid: ["2017-01-01", "2017-12-31"]}
-  metric: mae                      # validation MAE, mean over folds x horizons
-  selection:                       # the data the grid is scored on
-    dataset: forecast              # protocol C table
-    cities: core
-    feature_set: causal_common
-    horizons: [1, 3, 7]            # one direct model per horizon per fold
-  grid:                            # overrides models.lightgbm.params; 6 candidates
+lightgbm:
+  base:                            # every point model (all protocols / RQs)
+    objective: regression          # L2 point objective
+    n_estimators: 500
+    learning_rate: 0.05
+    subsample: 0.8                 # bagging; active only because subsample_freq > 0
+    subsample_freq: 1
+    colsample_bytree: 0.8
+    reg_lambda: 1.0
+    bagging_seed: 42
+    random_state: 42
+    n_jobs: 1
+    deterministic: true
+    force_col_wise: true
+    verbosity: -1
+  early_stopping: false            # DISABLED: no early-stopping callback or eval set anywhere
+  grid:                            # 6 candidates; num_leaves outer loop, min_child_samples inner
     num_leaves: [15, 31, 63]
     min_child_samples: [20, 50]
-  refit: train_2015_2017           # final models refit on all split_main == train rows
-  selected_params_file: outputs/tables/lightgbm_selected_params.json
+    candidates:                    # fixed order = tie-break order
+      - {candidate_id: c1, num_leaves: 15, min_child_samples: 20}
+      - {candidate_id: c2, num_leaves: 15, min_child_samples: 50}
+      - {candidate_id: c3, num_leaves: 31, min_child_samples: 20}
+      - {candidate_id: c4, num_leaves: 31, min_child_samples: 50}
+      - {candidate_id: c5, num_leaves: 63, min_child_samples: 20}
+      - {candidate_id: c6, num_leaves: 63, min_child_samples: 50}
+  quantile_alphas: [0.05, 0.95]    # RQ3 later: objective -> quantile, alpha; nothing else changes
+  selected: null                   # written ONCE by task 2 (only post-freeze YAML edit allowed)
 
-models:
-  lightgbm:
-    status: proposed               # base values; tuned keys come from tuning.grid
-    params:                        # base for every candidate; identical across RQ1-RQ3
-      n_estimators: 500
-      learning_rate: 0.05
-      num_leaves: 31
-      min_child_samples: 20
-      subsample: 0.8               # bagging; only active because subsample_freq > 0
-      subsample_freq: 1            # (= bagging_freq)
-      bagging_seed: 42             # must equal top-level seed (tested)
-      colsample_bytree: 0.8
-      reg_lambda: 1.0
-      deterministic: true          # reproducible; requires force_col_wise/row_wise
-      force_col_wise: true
-      n_jobs: 1
-      verbose: -1
-    point_objective: regression    # L2
-    quantile_alphas: [0.05, 0.95]  # RQ3, objective = quantile
-    early_stopping: false          # never; no data beyond the CV folds is consulted
+tuning:
+  assign_by: target_date
+  folds:                           # expanding window, by TARGET year
+    - {train_targets: "2015", validate_targets: "2016"}
+    - {train_targets: "2015-2016", validate_targets: "2017"}
+  horizons: [1, 3, 7]              # one pooled direct model per horizon per fold per candidate
+  feature_set: causal_common
+  cities: core                     # Delhi, Lucknow, Chennai, Hyderabad, Bengaluru
+  eval_rows: eval_mask
+  selection_metric: mean_val_mae   # mean validation MAE over 2 folds x 3 horizons
+  tie_break: earliest_in_grid_order
+  max_allowed_target_date: "2017-12-31"   # hard guard; nothing later enters any tuning frame
+  cv_results_file: outputs/models/tuning_cv_results.csv
+  selected_params_file: outputs/models/selected_params.json
+
+metrics:
+  point: [mae, rmse, r2, n]        # formulas in src/metrics.py; R2 = 1 - SSE/SST
+  eval_rows: eval_mask             # Day 1 common evaluation sample (target observed, y_t observed,
+                                   # raw y[t+h-7] observed)

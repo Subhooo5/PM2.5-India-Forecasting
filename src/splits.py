@@ -123,15 +123,27 @@ def rq1_bc_common_index(same_day: pd.DataFrame, forecast: pd.DataFrame, h: int) 
 
 
 # ------------------------------------------------------------------ tuning rule
+def year_span(spec) -> tuple[pd.Timestamp, pd.Timestamp]:
+    """'2015' -> (2015-01-01, 2015-12-31); '2015-2016' -> (2015-01-01, 2016-12-31)."""
+    parts = str(spec).split("-")
+    if len(parts) not in (1, 2) or not all(p.isdigit() and len(p) == 4 for p in parts):
+        raise ValueError(f"bad year span {spec!r}")
+    y0, y1 = int(parts[0]), int(parts[-1])
+    if y1 < y0:
+        raise ValueError(f"bad year span {spec!r}")
+    return pd.Timestamp(f"{y0}-01-01"), pd.Timestamp(f"{y1}-12-31")
+
+
 def assert_training_only(target_dates, cfg: dict) -> None:
-    """Raise LeakageError if any date lies outside tuning.allowed_target_range (2015-2017).
+    """Raise LeakageError if any target date is outside data.date_min..tuning.max_allowed_target_date.
 
     Every hyperparameter/model-selection step must call this on ALL data it touches.
     """
-    lo, hi = (pd.Timestamp(x) for x in cfg["tuning"]["allowed_target_range"])
+    lo = pd.Timestamp(cfg["data"]["date_min"])
+    hi = pd.Timestamp(cfg["tuning"]["max_allowed_target_date"])
     cal_start = split_ranges(cfg, "main")["calibration"][0]
     if hi >= cal_start:
-        raise LeakageError("tuning range must end before the calibration year")
+        raise LeakageError("tuning.max_allowed_target_date must be before the calibration year")
     td = pd.to_datetime(pd.Series(target_dates))
     bad = td[(td < lo) | (td > hi)]
     if len(bad):
@@ -140,14 +152,14 @@ def assert_training_only(target_dates, cfg: dict) -> None:
 
 
 def expanding_window_folds(ds: pd.DataFrame, cfg: dict) -> list[tuple[pd.Index, pd.Index]]:
-    """Expanding-window (train, valid) row-index pairs by target date, all inside 2015-2017."""
+    """Expanding-window (train, valid) row-index pairs from `tuning.folds`, by TARGET year."""
     folds, prev_train_end = [], None
-    lo_allowed = pd.Timestamp(cfg["tuning"]["allowed_target_range"][0])
-    for f in cfg["tuning"]["expanding_cv_folds"]:
-        tr_lo, tr_hi = pd.Timestamp(f["train"][0]), pd.Timestamp(f["train"][1])
-        va_lo, va_hi = pd.Timestamp(f["valid"][0]), pd.Timestamp(f["valid"][1])
+    lo_allowed = pd.Timestamp(cfg["data"]["date_min"])
+    for f in cfg["tuning"]["folds"]:
+        tr_lo, tr_hi = year_span(f["train_targets"])
+        va_lo, va_hi = year_span(f["validate_targets"])
         if tr_lo != lo_allowed:
-            raise LeakageError("expanding window must start at the beginning of the training range")
+            raise LeakageError("expanding window must start at the beginning of the data")
         if not tr_hi < va_lo:
             raise LeakageError("validation must come strictly after training")
         if prev_train_end is not None and tr_hi <= prev_train_end:

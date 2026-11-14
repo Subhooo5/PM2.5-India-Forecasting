@@ -28,7 +28,8 @@ def test_baseline_predictions_returns_dataframe(ds):
 def test_other_return_types(ds, cfg):
     assert type(select_cities(cfg)) is dict
     assert type(feature_set(cfg, "causal_common")) is list
-    assert type(lightgbm_params({**cfg, "tuning": {**cfg["tuning"], "mode": "fixed"}})) is dict
+    sel = {**cfg, "lightgbm": {**cfg["lightgbm"], "selected": cfg["lightgbm"]["grid"]["candidates"][0]}}
+    assert type(lightgbm_params(sel)) is dict
     assert type(encode_city(ds, cfg["cities"]["core"])) is pd.Series
     units = ds.loc[ds["horizon"] == 1, ["city", "target_date"]]
     assert type(random_split_unique(units, 0.2, 0)) is pd.Series

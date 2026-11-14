@@ -21,7 +21,7 @@ def test_one_row_per_city_target_date(same_day, raw, cfg):
 
 
 def test_same_day_columns(same_day, cfg):
-    assert list(same_day.columns) == ["city", "target_date", *F.feature_set(cfg, "same_day"),
+    assert list(same_day.columns) == ["city", "target_date", *F.feature_set(cfg, "same_day_estimation"),
                                       "y_target", "split_A", "split_B"]
     assert "AQI_Bucket" not in same_day.columns
     assert not any(c.startswith("pm25_") for c in same_day.columns)   # no PM2.5 history
