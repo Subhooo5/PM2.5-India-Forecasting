@@ -1,0 +1,161 @@
+{
+  "selected_candidate_id": "c2",
+  "selected_structural_params": {
+    "num_leaves": 15,
+    "min_child_samples": 50
+  },
+  "full_params": {
+    "objective": "regression",
+    "n_estimators": 500,
+    "learning_rate": 0.05,
+    "subsample": 0.8,
+    "subsample_freq": 1,
+    "colsample_bytree": 0.8,
+    "reg_lambda": 1.0,
+    "bagging_seed": 42,
+    "random_state": 42,
+    "n_jobs": 1,
+    "deterministic": true,
+    "force_col_wise": true,
+    "verbosity": -1,
+    "num_leaves": 15,
+    "min_child_samples": 50
+  },
+  "ranking": [
+    {
+      "candidate_id": "c1",
+      "num_leaves": 15,
+      "min_child_samples": 20,
+      "mean_val_mae": 26.7346420752,
+      "mean_mae_h1": 22.1734861119,
+      "mean_mae_h3": 28.0787230314,
+      "mean_mae_h7": 29.9517170822,
+      "grid_order": 1,
+      "rank": 2,
+      "selected": false
+    },
+    {
+      "candidate_id": "c2",
+      "num_leaves": 15,
+      "min_child_samples": 50,
+      "mean_val_mae": 26.6328615443,
+      "mean_mae_h1": 22.0861733505,
+      "mean_mae_h3": 27.8059947161,
+      "mean_mae_h7": 30.0064165665,
+      "grid_order": 2,
+      "rank": 1,
+      "selected": true
+    },
+    {
+      "candidate_id": "c3",
+      "num_leaves": 31,
+      "min_child_samples": 20,
+      "mean_val_mae": 27.3719007185,
+      "mean_mae_h1": 22.8932737793,
+      "mean_mae_h3": 28.6634773235,
+      "mean_mae_h7": 30.5589510526,
+      "grid_order": 3,
+      "rank": 5,
+      "selected": false
+    },
+    {
+      "candidate_id": "c4",
+      "num_leaves": 31,
+      "min_child_samples": 50,
+      "mean_val_mae": 27.0522815758,
+      "mean_mae_h1": 22.391859312,
+      "mean_mae_h3": 28.3212208883,
+      "mean_mae_h7": 30.443764527,
+      "grid_order": 4,
+      "rank": 3,
+      "selected": false
+    },
+    {
+      "candidate_id": "c5",
+      "num_leaves": 63,
+      "min_child_samples": 20,
+      "mean_val_mae": 27.6893614428,
+      "mean_mae_h1": 23.1684314761,
+      "mean_mae_h3": 29.0238189321,
+      "mean_mae_h7": 30.8758339204,
+      "grid_order": 5,
+      "rank": 6,
+      "selected": false
+    },
+    {
+      "candidate_id": "c6",
+      "num_leaves": 63,
+      "min_child_samples": 50,
+      "mean_val_mae": 27.1086461782,
+      "mean_mae_h1": 22.5511304537,
+      "mean_mae_h3": 28.2031748011,
+      "mean_mae_h7": 30.5716332798,
+      "grid_order": 6,
+      "rank": 4,
+      "selected": false
+    }
+  ],
+  "selection_metric": "mean_val_mae",
+  "tie_break": "earliest_in_grid_order",
+  "folds": [
+    {
+      "train_targets": "2015",
+      "validate_targets": "2016"
+    },
+    {
+      "train_targets": "2015-2016",
+      "validate_targets": "2017"
+    }
+  ],
+  "horizons": [
+    1,
+    3,
+    7
+  ],
+  "feature_set": "causal_common",
+  "features": [
+    "pm25_origin",
+    "pm25_lag1",
+    "pm25_lag2",
+    "pm25_lag3",
+    "pm25_lag7",
+    "pm25_lag1_imputed",
+    "pm25_lag2_imputed",
+    "pm25_lag3_imputed",
+    "pm25_lag7_imputed",
+    "pm25_rmean3",
+    "pm25_rstd3",
+    "pm25_rmean7",
+    "pm25_rstd7",
+    "pm25_rmean14",
+    "pm25_rstd14",
+    "tgt_month",
+    "tgt_dow",
+    "tgt_doy_sin",
+    "tgt_doy_cos"
+  ],
+  "cities": [
+    "Delhi",
+    "Lucknow",
+    "Chennai",
+    "Hyderabad",
+    "Bengaluru"
+  ],
+  "tuning_frame": {
+    "n_rows": 14797,
+    "min_target_date": "2015-01-02",
+    "max_target_date": "2017-12-31"
+  },
+  "config_hash": "58b19763dbb68c204aa9e61abb9268fe386928e65941cb45235e27ed37cbc35e",
+  "dataset_sha256": "0d84b21c3e4878bbad8df362f2ab05f61ad959538dddf5918e714077ed3c1847",
+  "processed_dataset_sha256": "879a1b41d2bc5a37b1e53de2052db0a6b87a51f11f1a083fa26cca1fc83b8776",
+  "kaggle_version": 12,
+  "versions": {
+    "lightgbm": "4.7.0",
+    "numpy": "2.4.6",
+    "pandas": "3.1.1"
+  },
+  "seed": 42,
+  "created_utc": "2026-11-14T09:25:24+00:00",
+  "git_commit": "cb1aac55e109bd7b8fe4a3d02c5c0008ba0dc3f2"
+}

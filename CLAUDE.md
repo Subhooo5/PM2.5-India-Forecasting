@@ -146,6 +146,7 @@ python -m src.data_audit            # Day 1 items 1–3: verify raw data, write 
 python -m src.features              # Day 1 items 4–9: build + export processed parquet and sample tables
 python -m src.features rq1          # RQ1 A/B same-day table -> data/processed/rq1_same_day_dataset.parquet
 pytest -q                           # all tests
+python -c "from src import data_audit as da; from src.experiments import run_tuning; run_tuning(da.load_config())"  # Day 2 task 2 (already run ONCE; do not re-run)
 jupyter lab                         # pick kernel "Python (pm25)"
 shasum -a 256 data/raw/city_day.csv # must equal frozen sha256
 ```
@@ -185,7 +186,7 @@ Setup: ✅ scaffold · ✅ venv (Py 3.11) + pinned requirements · ✅ imports v
 | # | Task | Status | Verified by |
 |---|------|--------|-------------|
 | 1 | Freeze LightGBM config and experiment settings (YAML) | ✅ 2026-11-14 | YAML loads; `tests/test_lightgbm_params.py`, `tests/test_validation_rule.py`; commit "Day 2 task 1: …" made before any tuning |
-| 2 | Expanding-window hyperparameter selection (`run_tuning`) | ☐ | |
+| 2 | Expanding-window hyperparameter selection (`run_tuning`) | ✅ 2026-11-14: run once; selected **c2** (num_leaves 15, min_child_samples 50), mean val MAE 26.633 | `tests/test_tuning.py` (a–g + official-artifact checks); outputs/models/tuning_cv_results.csv, selected_params.json |
 | 3 | Shared LightGBM training pipeline (`src/models.py`, `src/metrics.py`) | ☐ | |
 | 4–9 | Not started; do not begin without the user's go-ahead | ☐ | |
 
@@ -226,6 +227,9 @@ Known gotcha: in YAML, quote column names — unquoted `NO` parses as boolean Fa
 | `causal_common` (frozen) | 19 columns: pm25_origin + lags 1,2,3,7 + 4 lag-imputed flags + rolling mean/std 3,7,14 + 4 target-date calendar features; no city, no AQI/co-pollutants (keeps the Day 1 decisions) | 2026-11-14 | yes |
 | predict column check | Strict on the feature block: `predict_lgbm` builds X from the stored feature list in stored order, raises on missing features or a booster whose names/order differ from the stored list / YAML set; `validate_feature_frame` raises on missing/extra/reordered for explicit matrices | 2026-11-14 | yes |
 | CLAUDE.md in git | Keep tracking (user's `/CLAUDE.md` .gitignore line left as-is; no effect on a tracked file); updates go into each task commit | 2026-11-14 | yes |
+| Tuning result (write-back) | `lightgbm.selected` = c2 (num_leaves 15, min_child_samples 50), from the single official `run_tuning` run (mean val MAE 26.633 vs runner-up c1 26.735). This is the only post-freeze YAML edit; `config_hash` (which excludes `selected`) is unchanged and tested | 2026-11-14 | per user spec (task 2) |
+| metrics.py timing | `mae`/`rmse`/`r2`/`point_metrics` were written in task 2 because tuning needs them; their tests are in task 3 | 2026-11-14 | n/a (sequencing note) |
+| Tuning observation | Fold 1: c4 ≡ c6. With ~1,480 rows and min_child_samples 50, trees can't reach 31 leaves, so the 31 vs 63 cap doesn't bind. Expected, not re-tuned | 2026-11-14 | reported to user |
 
 ## 8. Open decisions (ask the user before the day that needs them)
 - Top-10% threshold for transfer cities: Kolkata/Mumbai have no 2015–17 data, so a "training-period" threshold is undefined in the main scheme. Needed on the metrics day.

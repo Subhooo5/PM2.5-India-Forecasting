@@ -150,7 +150,10 @@ lightgbm:
       - {candidate_id: c5, num_leaves: 63, min_child_samples: 20}
       - {candidate_id: c6, num_leaves: 63, min_child_samples: 50}
   quantile_alphas: [0.05, 0.95]    # RQ3 later: objective -> quantile, alpha; nothing else changes
-  selected: null                   # written ONCE by task 2 (only post-freeze YAML edit allowed)
+  selected:                        # written ONCE by task 2 run_tuning (only post-freeze YAML edit)
+    candidate_id: c2               # lowest mean validation MAE (26.633) over 2 folds x 3 horizons
+    num_leaves: 15
+    min_child_samples: 50
 
 tuning:
   assign_by: target_date

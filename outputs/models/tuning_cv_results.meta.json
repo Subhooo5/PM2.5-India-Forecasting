@@ -1,0 +1,26 @@
+{
+  "file": "tuning_cv_results.csv",
+  "dataset_sha256": "0d84b21c3e4878bbad8df362f2ab05f61ad959538dddf5918e714077ed3c1847",
+  "kaggle_dataset": "Kaggle: Air Quality Data in India (2015-2020), by Vopani (rohanrao/air-quality-data-in-india)",
+  "kaggle_version": 12,
+  "config_sha256": "1d7b40d6962ed34d1f3e5dfae32581b91e140c2afca4e70f3ace0f22702d170e",
+  "generator": "src.experiments.run_tuning",
+  "created_utc": "2026-11-14T09:25:24+00:00",
+  "n_rows": 36,
+  "columns": [
+    "candidate_id",
+    "num_leaves",
+    "min_child_samples",
+    "fold",
+    "horizon",
+    "n_train",
+    "n_val",
+    "mae",
+    "rmse",
+    "r2"
+  ],
+  "seed": 42,
+  "notes": "Expanding-window CV inside 2015-2017 only; eval_mask rows.",
+  "git_commit": "cb1aac55e109bd7b8fe4a3d02c5c0008ba0dc3f2",
+  "git_dirty": true
+}
