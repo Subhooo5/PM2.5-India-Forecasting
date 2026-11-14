@@ -133,8 +133,8 @@ src/features.py           causal features h = 1,3,7, named feature sets, RQ1 sam
 src/splits.py             target-date splits, RQ1 A/B splits, B-vs-C common index, tuning guard + expanding folds, LOCO
 src/models.py             baselines (Day 1 item 8), frozen LightGBM params (base/grid/selected), fit/predict pipeline (Day 2 task 3)
 src/conformal.py          later: CQR, CQR+ACI (RQ3)
-src/metrics.py            later: point and interval metrics, breakdowns
-src/experiments.py        later: protocol A/B/C, cross-city, uncertainty runners
+src/metrics.py            mae, rmse, r2, point_metrics (Day 2); interval metrics + breakdowns later
+src/experiments.py        run_tuning (Day 2 task 2, run once); protocol/RQ runners later
 tests/                    executable verification (data audit, features/causality, splits, baselines/export)
 outputs/tables|figures|predictions|models/   (models/ = tuning results, selected params, saved models)
 ```
@@ -187,8 +187,10 @@ Setup: ✅ scaffold · ✅ venv (Py 3.11) + pinned requirements · ✅ imports v
 |---|------|--------|-------------|
 | 1 | Freeze LightGBM config and experiment settings (YAML) | ✅ 2026-11-14 | YAML loads; `tests/test_lightgbm_params.py`, `tests/test_validation_rule.py`; commit "Day 2 task 1: …" made before any tuning |
 | 2 | Expanding-window hyperparameter selection (`run_tuning`) | ✅ 2026-11-14: run once; selected **c2** (num_leaves 15, min_child_samples 50), mean val MAE 26.633 | `tests/test_tuning.py` (a–g + official-artifact checks); outputs/models/tuning_cv_results.csv, selected_params.json |
-| 3 | Shared LightGBM training pipeline (`src/models.py`, `src/metrics.py`) | ☐ | |
+| 3 | Shared LightGBM training pipeline (`src/models.py`, `src/metrics.py`) | ✅ 2026-11-14 | `tests/test_lgbm_pipeline.py` (a–h); (i) via existing `tests/test_return_types.py`; full suite 143 passed, 0 warnings |
 | 4–9 | Not started; do not begin without the user's go-ahead | ☐ | |
+
+**Iteration 1 done.** STOP: waiting for user approval before task 4.
 
 Iteration 1 scope: NO protocol A/B/C models, NO RQ1/RQ2 runs, NO baseline scoring, NO quantile/CQR/ACI/intervals, NO 2020 stress test. Never read, tune on or score any row with target_date ≥ 2018-01-01 in tuning.
 
@@ -230,6 +232,7 @@ Known gotcha: in YAML, quote column names — unquoted `NO` parses as boolean Fa
 | Tuning result (write-back) | `lightgbm.selected` = c2 (num_leaves 15, min_child_samples 50), from the single official `run_tuning` run (mean val MAE 26.633 vs runner-up c1 26.735). This is the only post-freeze YAML edit; `config_hash` (which excludes `selected`) is unchanged and tested | 2026-11-14 | per user spec (task 2) |
 | metrics.py timing | `mae`/`rmse`/`r2`/`point_metrics` were written in task 2 because tuning needs them; their tests are in task 3 | 2026-11-14 | n/a (sequencing note) |
 | Tuning observation | Fold 1: c4 ≡ c6. With ~1,480 rows and min_child_samples 50, trees can't reach 31 leaves, so the 31 vs 63 cap doesn't bind. Expected, not re-tuned | 2026-11-14 | reported to user |
+| Pipeline API (task 3) | `fit_lgbm(df, feature_set_name, horizon, params, train_date_range, config, *, stage="final")` → (model, metadata); keyword `stage="tuning"` turns on the hard 2017-12-31 guard. Saved models are LightGBM text files + `<stem>.meta.json`. Metrics: n=0 → NaN; constant target → R² NaN; a NaN prediction on an observed target raises | 2026-11-14 | per user spec (task 3) |
 
 ## 8. Open decisions (ask the user before the day that needs them)
 - Top-10% threshold for transfer cities: Kolkata/Mumbai have no 2015–17 data, so a "training-period" threshold is undefined in the main scheme. Needed on the metrics day.
