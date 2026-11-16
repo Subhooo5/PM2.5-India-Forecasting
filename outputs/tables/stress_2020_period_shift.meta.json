@@ -1,0 +1,36 @@
+{
+  "file": "stress_2020_period_shift.csv",
+  "dataset_sha256": "0d84b21c3e4878bbad8df362f2ab05f61ad959538dddf5918e714077ed3c1847",
+  "kaggle_dataset": "Kaggle: Air Quality Data in India (2015-2020), by Vopani (rohanrao/air-quality-data-in-india)",
+  "kaggle_version": 12,
+  "config_sha256": "f043998ae78033b8f40a8b044e1013dbd49f6aef51fdb9831384a76a39ef8d08",
+  "config_hash": "16c3e27d0181541fd9baaadd70a02f26c86957f22ae7830ab7a1ba9d0d352531",
+  "selected_candidate": "c2",
+  "generator": "src.stress.run_diagnostics",
+  "created_utc": "2026-11-16T08:59:35+00:00",
+  "n_rows": 486,
+  "columns": [
+    "scope",
+    "city",
+    "horizon",
+    "family",
+    "method",
+    "metric",
+    "pre_lockdown",
+    "lockdown",
+    "abs_change",
+    "rel_change_pct",
+    "n_pre",
+    "n_lockdown"
+  ],
+  "seed": 42,
+  "versions": {
+    "lightgbm": "4.7.0",
+    "numpy": "2.4.6",
+    "pandas": "3.1.1"
+  },
+  "notes": "Read-only diagnostics from saved predictions; pre/lockdown also differ in season.",
+  "git_commit": "b01c8c2d111a8e5886d0937293ddcac9449cb656",
+  "git_dirty": true,
+  "stress_config_hash": "2f8f235ca0e9c55626d4e7837eb87fb65905141fdbab6769ff99509188abed37"
+}

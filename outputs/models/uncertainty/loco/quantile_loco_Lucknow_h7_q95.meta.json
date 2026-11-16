@@ -1,0 +1,67 @@
+{
+  "feature_set": "causal_common",
+  "features": [
+    "pm25_origin",
+    "pm25_lag1",
+    "pm25_lag2",
+    "pm25_lag3",
+    "pm25_lag7",
+    "pm25_lag1_imputed",
+    "pm25_lag2_imputed",
+    "pm25_lag3_imputed",
+    "pm25_lag7_imputed",
+    "pm25_rmean3",
+    "pm25_rstd3",
+    "pm25_rmean7",
+    "pm25_rstd7",
+    "pm25_rmean14",
+    "pm25_rstd14",
+    "tgt_month",
+    "tgt_dow",
+    "tgt_doy_sin",
+    "tgt_doy_cos"
+  ],
+  "horizon": 7,
+  "params": {
+    "objective": "quantile",
+    "n_estimators": 500,
+    "learning_rate": 0.05,
+    "subsample": 0.8,
+    "subsample_freq": 1,
+    "colsample_bytree": 0.8,
+    "reg_lambda": 1.0,
+    "bagging_seed": 42,
+    "random_state": 42,
+    "n_jobs": 1,
+    "deterministic": true,
+    "force_col_wise": true,
+    "verbosity": -1,
+    "num_leaves": 15,
+    "min_child_samples": 50,
+    "alpha": 0.95
+  },
+  "train_date_range": [
+    "2015-01-01",
+    "2017-12-31"
+  ],
+  "n_train": 3918,
+  "train_cities": [
+    "Bengaluru",
+    "Chennai",
+    "Delhi",
+    "Hyderabad"
+  ],
+  "seed": 42,
+  "dataset_sha256": "0d84b21c3e4878bbad8df362f2ab05f61ad959538dddf5918e714077ed3c1847",
+  "kaggle_version": 12,
+  "config_hash": "16c3e27d0181541fd9baaadd70a02f26c86957f22ae7830ab7a1ba9d0d352531",
+  "versions": {
+    "lightgbm": "4.7.0",
+    "numpy": "2.4.6",
+    "pandas": "3.1.1"
+  },
+  "created_utc": "2026-11-16T08:59:27+00:00",
+  "quantile": 0.95,
+  "uncertainty_config_hash": "236cbcdfe934405285bf9c2483ac7cc4c318bea6f3a5ec71dd51d6bf2ff2e572",
+  "held_out_city": "Lucknow"
+}

@@ -1,0 +1,481 @@
+{
+  "file": "leakage_comparison.csv",
+  "dataset_sha256": "0d84b21c3e4878bbad8df362f2ab05f61ad959538dddf5918e714077ed3c1847",
+  "kaggle_dataset": "Kaggle: Air Quality Data in India (2015-2020), by Vopani (rohanrao/air-quality-data-in-india)",
+  "kaggle_version": 12,
+  "config_sha256": "f043998ae78033b8f40a8b044e1013dbd49f6aef51fdb9831384a76a39ef8d08",
+  "config_hash": "16c3e27d0181541fd9baaadd70a02f26c86957f22ae7830ab7a1ba9d0d352531",
+  "selected_candidate": "c2",
+  "generator": "src.leakage.run_comparison",
+  "created_utc": "2026-11-16T08:59:17+00:00",
+  "n_rows": 27,
+  "columns": [
+    "comparison",
+    "scope",
+    "seed",
+    "horizon",
+    "n_left",
+    "n_right",
+    "mae_left",
+    "rmse_left",
+    "r2_left",
+    "mae_right",
+    "rmse_right",
+    "r2_right",
+    "mae_diff",
+    "rmse_diff",
+    "r2_diff_points",
+    "rel_inflation_mae_pct",
+    "rel_inflation_rmse_pct",
+    "skill_mae_left",
+    "skill_mae_right",
+    "skill_n_left",
+    "skill_n_right",
+    "notes",
+    "dataset_sha256",
+    "kaggle_version",
+    "config_hash",
+    "selected_candidate"
+  ],
+  "seed": 42,
+  "versions": {
+    "lightgbm": "4.7.0",
+    "numpy": "2.4.6",
+    "pandas": "3.1.1"
+  },
+  "notes": "A vs B and B vs C on matched rows; see the notes column.",
+  "git_commit": "b01c8c2d111a8e5886d0937293ddcac9449cb656",
+  "git_dirty": true,
+  "split_composition": {
+    "A": {
+      "n_train": 5470,
+      "n_test": 1369,
+      "test_share": 0.2002,
+      "test_rows_per_year": {
+        "2015": 317,
+        "2016": 334,
+        "2017": 354,
+        "2019": 364
+      },
+      "test_share_per_city": {
+        "Bengaluru": 0.2001,
+        "Chennai": 0.2001,
+        "Delhi": 0.2001,
+        "Hyderabad": 0.2003,
+        "Lucknow": 0.2001
+      }
+    },
+    "B": {
+      "n_train": 5014,
+      "n_test": 1825,
+      "test_share": 0.2669,
+      "test_rows_per_year": {
+        "2019": 1825
+      }
+    },
+    "note": "A's test days are interleaved with its training days; B's test is the whole of 2019."
+  },
+  "b_vs_c_common_counts": {
+    "1": 1825,
+    "3": 1825,
+    "7": 1825
+  },
+  "diagnostics": {
+    "i_A_error_by_year": [
+      {
+        "year": 2015,
+        "n": 317,
+        "mae": 14.3655709094,
+        "rmse": 25.1055845242,
+        "mean_y": 70.5761198738
+      },
+      {
+        "year": 2016,
+        "n": 334,
+        "mae": 16.0494234977,
+        "rmse": 30.2354205507,
+        "mean_y": 84.1242215569
+      },
+      {
+        "year": 2017,
+        "n": 354,
+        "mae": 13.3491332013,
+        "rmse": 22.961351332,
+        "mean_y": 77.0355649718
+      },
+      {
+        "year": 2019,
+        "n": 364,
+        "mae": 8.6176467411,
+        "rmse": 12.5168566687,
+        "mean_y": 65.9537912088
+      }
+    ],
+    "i_A_error_by_city": [
+      {
+        "city": "Bengaluru",
+        "n": 267,
+        "mae": 9.2393913375,
+        "rmse": 13.3995601892,
+        "mean_y": 33.3482397004
+      },
+      {
+        "city": "Chennai",
+        "n": 269,
+        "mae": 10.4428934368,
+        "rmse": 16.321309017,
+        "mean_y": 51.4695539033
+      },
+      {
+        "city": "Delhi",
+        "n": 292,
+        "mae": 15.6998826379,
+        "rmse": 23.1262180897,
+        "mean_y": 125.7894178082
+      },
+      {
+        "city": "Hyderabad",
+        "n": 269,
+        "mae": 11.3791952089,
+        "rmse": 28.4816673182,
+        "mean_y": 51.7704089219
+      },
+      {
+        "city": "Lucknow",
+        "n": 272,
+        "mae": 17.8506798913,
+        "rmse": 30.6081033632,
+        "mean_y": 104.1979779412
+      }
+    ],
+    "i_A_top10_abs_errors": [
+      {
+        "city": "Hyderabad",
+        "target_date": "2016-07-11T00:00:00.000",
+        "y_true": 357.85,
+        "y_pred": 87.6137130979,
+        "abs_err": 270.2362869021
+      },
+      {
+        "city": "Lucknow",
+        "target_date": "2016-06-03T00:00:00.000",
+        "y_true": 42.82,
+        "y_pred": 282.4815420594,
+        "abs_err": 239.6615420594
+      },
+      {
+        "city": "Hyderabad",
+        "target_date": "2015-10-30T00:00:00.000",
+        "y_true": 516.2,
+        "y_pred": 276.5949750631,
+        "abs_err": 239.6050249369
+      },
+      {
+        "city": "Hyderabad",
+        "target_date": "2015-10-29T00:00:00.000",
+        "y_true": 252.47,
+        "y_pred": 78.1791612544,
+        "abs_err": 174.2908387456
+      },
+      {
+        "city": "Delhi",
+        "target_date": "2017-04-08T00:00:00.000",
+        "y_true": 151.25,
+        "y_pred": 292.7105821707,
+        "abs_err": 141.4605821707
+      },
+      {
+        "city": "Lucknow",
+        "target_date": "2016-06-19T00:00:00.000",
+        "y_true": 246.56,
+        "y_pred": 116.6399328256,
+        "abs_err": 129.9200671744
+      },
+      {
+        "city": "Lucknow",
+        "target_date": "2017-11-13T00:00:00.000",
+        "y_true": 446.68,
+        "y_pred": 321.4679712915,
+        "abs_err": 125.2120287085
+      },
+      {
+        "city": "Lucknow",
+        "target_date": "2017-06-16T00:00:00.000",
+        "y_true": 212.17,
+        "y_pred": 91.2859089828,
+        "abs_err": 120.8840910172
+      },
+      {
+        "city": "Delhi",
+        "target_date": "2017-11-08T00:00:00.000",
+        "y_true": 639.19,
+        "y_pred": 530.5195594407,
+        "abs_err": 108.6704405593
+      },
+      {
+        "city": "Chennai",
+        "target_date": "2017-03-16T00:00:00.000",
+        "y_true": 286.08,
+        "y_pred": 184.9351969082,
+        "abs_err": 101.1448030918
+      }
+    ],
+    "ii_2019_pm25_by_city": [
+      {
+        "City": "Bengaluru",
+        "n": 365,
+        "mean": 35.4247671233,
+        "var": 260.9598414978,
+        "std": 16.1542514992,
+        "p99": 73.8096,
+        "max": 94.17,
+        "cv": 0.456015743,
+        "days_gt_mean_3sd": 2
+      },
+      {
+        "City": "Chennai",
+        "n": 365,
+        "mean": 43.9380273973,
+        "var": 639.2329521421,
+        "std": 25.2830566218,
+        "p99": 146.7988,
+        "max": 199.98,
+        "cv": 0.5754253916,
+        "days_gt_mean_3sd": 8
+      },
+      {
+        "City": "Delhi",
+        "n": 365,
+        "mean": 108.5014794521,
+        "var": 7318.0554104426,
+        "std": 85.5456334972,
+        "p99": 383.7128,
+        "max": 582.28,
+        "cv": 0.7884282678,
+        "days_gt_mean_3sd": 6
+      },
+      {
+        "City": "Hyderabad",
+        "n": 365,
+        "mean": 41.5537808219,
+        "var": 450.810525776,
+        "std": 21.2322991166,
+        "p99": 84.0396,
+        "max": 86.18,
+        "cv": 0.5109595011,
+        "days_gt_mean_3sd": 0
+      },
+      {
+        "City": "Lucknow",
+        "n": 365,
+        "mean": 98.0886575342,
+        "var": 3772.7269292368,
+        "std": 61.4225278643,
+        "p99": 268.43,
+        "max": 382.96,
+        "cv": 0.6261939903,
+        "days_gt_mean_3sd": 3
+      }
+    ],
+    "ii_chennai_top5_spikes": [
+      {
+        "date": "2019-02-26",
+        "y": 199.98,
+        "c_h1_lightgbm": 71.105895472,
+        "c_h1_persistence": 74.05
+      },
+      {
+        "date": "2019-02-14",
+        "y": 178.54,
+        "c_h1_lightgbm": 78.748103243,
+        "c_h1_persistence": 106.04
+      },
+      {
+        "date": "2019-03-02",
+        "y": 176.07,
+        "c_h1_lightgbm": 67.5002315387,
+        "c_h1_persistence": 114.56
+      },
+      {
+        "date": "2019-10-27",
+        "y": 153.73,
+        "c_h1_lightgbm": 73.6459719123,
+        "c_h1_persistence": 95.49
+      },
+      {
+        "date": "2019-11-08",
+        "y": 142.9,
+        "c_h1_lightgbm": 110.6193141557,
+        "c_h1_persistence": 121.43
+      }
+    ],
+    "iii_training_median_by_city": [
+      {
+        "City": "Bengaluru",
+        "train_median_2015_2017": 31.18
+      },
+      {
+        "City": "Chennai",
+        "train_median_2015_2017": 51.29
+      },
+      {
+        "City": "Delhi",
+        "train_median_2015_2017": 106.51
+      },
+      {
+        "City": "Hyderabad",
+        "train_median_2015_2017": 46.71
+      },
+      {
+        "City": "Lucknow",
+        "train_median_2015_2017": 85.87
+      }
+    ],
+    "iii_c_h1_lgbm_vs_persistence_by_level": [
+      {
+        "scope": "overall",
+        "city": "all",
+        "level": "above_train_median",
+        "n": 735,
+        "mae_lightgbm": 20.6070364166,
+        "mae_persistence": 21.8083265306,
+        "mae_diff_lgbm_minus_pers": -1.201290114,
+        "rmse_lightgbm": 33.3613243719,
+        "rmse_persistence": 36.87135789,
+        "rmse_diff_lgbm_minus_pers": -3.5100335181
+      },
+      {
+        "scope": "overall",
+        "city": "all",
+        "level": "at_or_below_train_median",
+        "n": 1090,
+        "mae_lightgbm": 11.7348098856,
+        "mae_persistence": 10.6778256881,
+        "mae_diff_lgbm_minus_pers": 1.0569841976,
+        "rmse_lightgbm": 20.390267038,
+        "rmse_persistence": 20.3167995814,
+        "rmse_diff_lgbm_minus_pers": 0.0734674566
+      },
+      {
+        "scope": "city",
+        "city": "Bengaluru",
+        "level": "above_train_median",
+        "n": 195,
+        "mae_lightgbm": 7.943773936,
+        "mae_persistence": 8.0346153846,
+        "mae_diff_lgbm_minus_pers": -0.0908414486,
+        "rmse_lightgbm": 10.2390047353,
+        "rmse_persistence": 10.4728899105,
+        "rmse_diff_lgbm_minus_pers": -0.2338851752
+      },
+      {
+        "scope": "city",
+        "city": "Bengaluru",
+        "level": "at_or_below_train_median",
+        "n": 170,
+        "mae_lightgbm": 6.4112354622,
+        "mae_persistence": 4.578,
+        "mae_diff_lgbm_minus_pers": 1.8332354622,
+        "rmse_lightgbm": 8.9201712583,
+        "rmse_persistence": 7.2072390079,
+        "rmse_diff_lgbm_minus_pers": 1.7129322503
+      },
+      {
+        "scope": "city",
+        "city": "Chennai",
+        "level": "above_train_median",
+        "n": 101,
+        "mae_lightgbm": 20.8530135536,
+        "mae_persistence": 22.6188118812,
+        "mae_diff_lgbm_minus_pers": -1.7657983276,
+        "rmse_lightgbm": 31.0000707297,
+        "rmse_persistence": 31.7877848761,
+        "rmse_diff_lgbm_minus_pers": -0.7877141464
+      },
+      {
+        "scope": "city",
+        "city": "Chennai",
+        "level": "at_or_below_train_median",
+        "n": 264,
+        "mae_lightgbm": 11.0895948093,
+        "mae_persistence": 10.1484090909,
+        "mae_diff_lgbm_minus_pers": 0.9411857184,
+        "rmse_lightgbm": 17.3674873295,
+        "rmse_persistence": 20.0410910079,
+        "rmse_diff_lgbm_minus_pers": -2.6736036784
+      },
+      {
+        "scope": "city",
+        "city": "Delhi",
+        "level": "above_train_median",
+        "n": 124,
+        "mae_lightgbm": 41.98439247,
+        "mae_persistence": 46.3708870968,
+        "mae_diff_lgbm_minus_pers": -4.3864946268,
+        "rmse_lightgbm": 56.3902063808,
+        "rmse_persistence": 67.5086237681,
+        "rmse_diff_lgbm_minus_pers": -11.1184173873
+      },
+      {
+        "scope": "city",
+        "city": "Delhi",
+        "level": "at_or_below_train_median",
+        "n": 241,
+        "mae_lightgbm": 19.7351969033,
+        "mae_persistence": 18.4781327801,
+        "mae_diff_lgbm_minus_pers": 1.2570641233,
+        "rmse_lightgbm": 31.255897317,
+        "rmse_persistence": 30.2116160439,
+        "rmse_diff_lgbm_minus_pers": 1.0442812732
+      },
+      {
+        "scope": "city",
+        "city": "Hyderabad",
+        "level": "above_train_median",
+        "n": 138,
+        "mae_lightgbm": 6.3186903313,
+        "mae_persistence": 6.4932608696,
+        "mae_diff_lgbm_minus_pers": -0.1745705382,
+        "rmse_lightgbm": 8.6318817038,
+        "rmse_persistence": 8.8565456429,
+        "rmse_diff_lgbm_minus_pers": -0.2246639391
+      },
+      {
+        "scope": "city",
+        "city": "Hyderabad",
+        "level": "at_or_below_train_median",
+        "n": 227,
+        "mae_lightgbm": 5.7945103334,
+        "mae_persistence": 5.0937444934,
+        "mae_diff_lgbm_minus_pers": 0.70076584,
+        "rmse_lightgbm": 7.9366346218,
+        "rmse_persistence": 7.0749241991,
+        "rmse_diff_lgbm_minus_pers": 0.8617104227
+      },
+      {
+        "scope": "city",
+        "city": "Lucknow",
+        "level": "above_train_median",
+        "n": 177,
+        "mae_lightgbm": 30.5815680665,
+        "mae_persistence": 31.2531638418,
+        "mae_diff_lgbm_minus_pers": -0.6715957753,
+        "rmse_lightgbm": 40.8904932628,
+        "rmse_persistence": 41.1584907661,
+        "rmse_diff_lgbm_minus_pers": -0.2679975033
+      },
+      {
+        "scope": "city",
+        "city": "Lucknow",
+        "level": "at_or_below_train_median",
+        "n": 188,
+        "mae_lightgbm": 14.3715075412,
+        "mae_persistence": 13.680212766,
+        "mae_diff_lgbm_minus_pers": 0.6912947752,
+        "rmse_lightgbm": 24.2203388794,
+        "rmse_persistence": 23.4887723065,
+        "rmse_diff_lgbm_minus_pers": 0.7315665729
+      }
+    ]
+  }
+}

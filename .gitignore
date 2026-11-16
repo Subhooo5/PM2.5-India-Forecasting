@@ -15,4 +15,7 @@ data/processed/*
 # Predictions are large and regenerated
 outputs/predictions/*
 !outputs/predictions/.gitkeep
-/CLAUDE.md
+
+# Local configuration and entry point
+/pytest.ini
+/run.py

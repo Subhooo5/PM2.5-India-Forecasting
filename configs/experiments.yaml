@@ -1,33 +1,26 @@
-# Single source of truth for paths and parameters (single file, per-stage sections;
-# confirmed 2026-11-13). Each module reads only its own section. Later days add
-# `models`, `conformal` and `experiments` sections.
-
 seed: 42
 
-paths:                       # relative to the repo root
+paths:
   raw_city_day: data/raw/city_day.csv
-  processed_dir: data/processed
+  forecast_dataset: data/processed/forecast_dataset.parquet
+  same_day_dataset: data/processed/leakage_same_day_dataset.parquet
   tables_dir: outputs/tables
   figures_dir: outputs/figures
   predictions_dir: outputs/predictions
-  processed_dataset: data/processed/forecast_dataset.parquet
+  models_dir: outputs/models
 
 data:
   source: "Kaggle: Air Quality Data in India (2015-2020), by Vopani (rohanrao/air-quality-data-in-india)"
   kaggle_version: 12
-  license: CC0
-  origin: CPCB
   sha256: 0d84b21c3e4878bbad8df362f2ab05f61ad959538dddf5918e714077ed3c1847
   n_rows: 29531
   n_cities: 26
   date_min: "2015-01-01"
   date_max: "2020-07-01"
-  # quoted on purpose: unquoted NO is parsed by YAML 1.1 as boolean False
   columns: ["City", "Date", "PM2.5", "PM10", "NO", "NO2", "NOx", "NH3", "CO", "SO2", "O3",
             "Benzene", "Toluene", "Xylene", "AQI", "AQI_Bucket"]
   target: PM2.5
 
-# Frozen design; splits are assigned by TARGET date. Ranges are inclusive.
 splits:
   main:
     train: ["2015-01-01", "2017-12-31"]
@@ -39,96 +32,68 @@ splits:
     test: ["2020-01-01", "2020-07-01"]
     lockdown_start: "2020-03-25"
 
-# Periods used only for the completeness / gap audit (Day 1 item 3).
 audit:
   periods:
     train_2015_2017: ["2015-01-01", "2017-12-31"]
     cal_2018: ["2018-01-01", "2018-12-31"]
     test_2019: ["2019-01-01", "2019-12-31"]
     stress_2020H1: ["2020-01-01", "2020-07-01"]
-  gap_bins: [1, 2, 3, 7]     # report gaps of length 1, 2, 3-7, >7 days
-  core_min_train_pct: 85.0   # sanity floor asserted in tests for core cities (train 2015-17)
+  gap_bins: [1, 2, 3, 7]
+  core_min_train_pct: 85.0
 
 cities:
   core: ["Delhi", "Lucknow", "Chennai", "Hyderabad", "Bengaluru"]
-  transfer: ["Kolkata", "Mumbai"]                 # transfer-only targets, never core training
-  transfer_optional: ["Visakhapatnam"]            # optional external held-out transfer
+  transfer: ["Kolkata", "Mumbai"]
+  transfer_optional: ["Visakhapatnam"]
 
 preprocessing:
-  ffill_limit: 2             # forward-fill historical INPUT lags only; sensitivity run later: 3
-                             # never fill y_t (origin) or the target; never bfill/interpolate
+  ffill_limit: 2
 
 features:
   horizons: [1, 3, 7]
-  lags: [1, 2, 3, 7]         # pm25_lag{k} = y_{t-k}; y_t itself is pm25_origin
+  lags: [1, 2, 3, 7]
   rolling_windows: [3, 7, 14]
-  rolling_min_obs: {3: 2, 7: 4, 14: 7}   # on raw observed values in [t-w+1, t]
-  calendar: [tgt_month, tgt_dow, tgt_doy_sin, tgt_doy_cos]   # of the TARGET date
-  # never allowed in strict (protocol C) features:
+  rolling_min_obs: {3: 2, 7: 4, 14: 7}
+  calendar: [tgt_month, tgt_dow, tgt_doy_sin, tgt_doy_cos]
   forbidden: ["AQI", "AQI_Bucket", "PM10", "NO", "NO2", "NOx", "NH3", "CO", "SO2", "O3",
               "Benzene", "Toluene", "Xylene"]
 
 baselines:
-  seasonal_period: 7         # seasonal naive: yhat[t+h] = y[t+h-7], raw observed only
+  seasonal_period: 7
 
-# ---------------------------------------------------------------------------------
-# Day 2 (frozen 2026-11-14, Day 2 task 1). Sections above are Day 1 and unchanged.
-# Every comparable experiment uses identical settings: protocols and RQs reuse
-# lightgbm.selected (written once by task 2) and change nothing but the objective /
-# quantile alpha for RQ3.
-# ---------------------------------------------------------------------------------
-
-# Named model-input sets (existing Day 1 column names). Every experiment selects one by name.
 feature_sets:
-  # Protocol C, RQ2 primary (pooled / per-city / LOCO), RQ3, tuning. No city ID, no AQI /
-  # AQI_Bucket / co-pollutants. Lags + imputed flags + rolling stats over [t-w+1, t] + calendar(target).
   causal_common: ["pm25_origin", "pm25_lag1", "pm25_lag2", "pm25_lag3", "pm25_lag7",
                   "pm25_lag1_imputed", "pm25_lag2_imputed", "pm25_lag3_imputed", "pm25_lag7_imputed",
                   "pm25_rmean3", "pm25_rstd3", "pm25_rmean7", "pm25_rstd7",
                   "pm25_rmean14", "pm25_rstd14",
                   "tgt_month", "tgt_dow", "tgt_doy_sin", "tgt_doy_cos"]
-  # RQ1 protocols A and B ONLY: same-day AQI + 11 co-pollutants + calendar of date d.
-  # No AQI_Bucket, no city ID, no PM2.5 lags, no imputation.
   same_day_estimation: ["AQI", "PM10", "NO", "NO2", "NOx", "NH3", "CO", "SO2", "O3",
                         "Benzene", "Toluene", "Xylene",
                         "tgt_month", "tgt_dow", "tgt_doy_sin", "tgt_doy_cos"]
-  # Ablation (pooled only; never LOCO). Defined, not used in Day 2 iteration 1.
   causal_city_aware: {extends: causal_common, add: ["city"]}
 
-rq1:
+leakage:
   cities: core
-  same_day_dataset: data/processed/rq1_same_day_dataset.parquet
   protocol_A:
-    task: same_day_estimation
     feature_set: same_day_estimation
-    split: random_unique_city_date
-    pool_target_years: [2015, 2016, 2017, 2019]   # = B's train + test; 2018 reserved for CQR
-    test_frac: 0.20                               # ~20% per city (rounded); B's test is all of 2019
+    pool_target_years: [2015, 2016, 2017, 2019]
+    test_frac: 0.20
     stratify_by: city
   protocol_B:
-    task: same_day_estimation
     feature_set: same_day_estimation
-    split: chronological            # train 2015-2017, test 2019 (splits.main); 2018 unused
   protocol_C:
-    task: forecast
     feature_set: causal_common
     horizons: [1, 3, 7]
-    split: chronological            # splits.main by target date; eval on eval_mask
-  b_vs_c_eval: common_city_date     # 2019 (city, target_date) with B row AND C eval_mask at h
 
-rq2:
-  primary_feature_set: causal_common
-  ablation_feature_set: causal_city_aware   # pooled only
-  train_cities: core
-  loco_held_out: core                       # rotate over each core city (train on the other 4)
-  transfer_eval: [transfer, transfer_optional]   # trained on all core cities, never trained on
+cross_city:
+  feature_set: causal_common
 
 lightgbm:
-  base:                            # every point model (all protocols / RQs)
-    objective: regression          # L2 point objective
+  base:
+    objective: regression
     n_estimators: 500
     learning_rate: 0.05
-    subsample: 0.8                 # bagging; active only because subsample_freq > 0
+    subsample: 0.8
     subsample_freq: 1
     colsample_bytree: 0.8
     reg_lambda: 1.0
@@ -138,39 +103,57 @@ lightgbm:
     deterministic: true
     force_col_wise: true
     verbosity: -1
-  early_stopping: false            # DISABLED: no early-stopping callback or eval set anywhere
-  grid:                            # 6 candidates; num_leaves outer loop, min_child_samples inner
+  early_stopping: false
+  grid:
     num_leaves: [15, 31, 63]
     min_child_samples: [20, 50]
-    candidates:                    # fixed order = tie-break order
+    candidates:
       - {candidate_id: c1, num_leaves: 15, min_child_samples: 20}
       - {candidate_id: c2, num_leaves: 15, min_child_samples: 50}
       - {candidate_id: c3, num_leaves: 31, min_child_samples: 20}
       - {candidate_id: c4, num_leaves: 31, min_child_samples: 50}
       - {candidate_id: c5, num_leaves: 63, min_child_samples: 20}
       - {candidate_id: c6, num_leaves: 63, min_child_samples: 50}
-  quantile_alphas: [0.05, 0.95]    # RQ3 later: objective -> quantile, alpha; nothing else changes
-  selected:                        # written ONCE by task 2 run_tuning (only post-freeze YAML edit)
-    candidate_id: c2               # lowest mean validation MAE (26.633) over 2 folds x 3 horizons
+  quantile_alphas: [0.05, 0.95]
+  selected:
+    candidate_id: c2
     num_leaves: 15
     min_child_samples: 50
 
 tuning:
-  assign_by: target_date
-  folds:                           # expanding window, by TARGET year
+  folds:
     - {train_targets: "2015", validate_targets: "2016"}
     - {train_targets: "2015-2016", validate_targets: "2017"}
-  horizons: [1, 3, 7]              # one pooled direct model per horizon per fold per candidate
+  horizons: [1, 3, 7]
   feature_set: causal_common
-  cities: core                     # Delhi, Lucknow, Chennai, Hyderabad, Bengaluru
+  cities: core
   eval_rows: eval_mask
-  selection_metric: mean_val_mae   # mean validation MAE over 2 folds x 3 horizons
-  tie_break: earliest_in_grid_order
-  max_allowed_target_date: "2017-12-31"   # hard guard; nothing later enters any tuning frame
-  cv_results_file: outputs/models/tuning_cv_results.csv
-  selected_params_file: outputs/models/selected_params.json
+  max_allowed_target_date: "2017-12-31"
 
-metrics:
-  point: [mae, rmse, r2, n]        # formulas in src/metrics.py; R2 = 1 - SSE/SST
-  eval_rows: eval_mask             # Day 1 common evaluation sample (target observed, y_t observed,
-                                   # raw y[t+h-7] observed)
+uncertainty:
+  quantiles: [0.05, 0.95]
+  alpha: 0.10
+  feature_set: causal_common
+  cities: core
+  horizons: [1, 3, 7]
+  split_column: split_main
+  aci:
+    gamma: 0.02
+    gamma_sensitivity: [0.005, 0.01, 0.02, 0.05]
+    alpha_init: 0.10
+    alpha_bounds: [0.01, 0.30]
+  seasons:
+    winter: [12, 1, 2]
+    pre_monsoon: [3, 4, 5]
+    monsoon: [6, 7, 8, 9]
+    post_monsoon: [10, 11]
+  regime:
+    top_fraction: 0.10
+
+stress_test:
+  split_column: split_stress
+  period_column: stress_period
+  cities: core
+  horizons: [1, 3, 7]
+  feature_set: causal_common
+  expected_test_days: {pre_lockdown: 84, lockdown: 99}

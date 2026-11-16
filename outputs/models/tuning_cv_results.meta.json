@@ -3,9 +3,11 @@
   "dataset_sha256": "0d84b21c3e4878bbad8df362f2ab05f61ad959538dddf5918e714077ed3c1847",
   "kaggle_dataset": "Kaggle: Air Quality Data in India (2015-2020), by Vopani (rohanrao/air-quality-data-in-india)",
   "kaggle_version": 12,
-  "config_sha256": "1d7b40d6962ed34d1f3e5dfae32581b91e140c2afca4e70f3ace0f22702d170e",
+  "config_sha256": "f043998ae78033b8f40a8b044e1013dbd49f6aef51fdb9831384a76a39ef8d08",
+  "config_hash": "16c3e27d0181541fd9baaadd70a02f26c86957f22ae7830ab7a1ba9d0d352531",
+  "selected_candidate": "c2",
   "generator": "src.experiments.run_tuning",
-  "created_utc": "2026-11-14T09:25:24+00:00",
+  "created_utc": "2026-11-16T08:59:13+00:00",
   "n_rows": 36,
   "columns": [
     "candidate_id",
@@ -20,7 +22,12 @@
     "r2"
   ],
   "seed": 42,
+  "versions": {
+    "lightgbm": "4.7.0",
+    "numpy": "2.4.6",
+    "pandas": "3.1.1"
+  },
   "notes": "Expanding-window CV inside 2015-2017 only; eval_mask rows.",
-  "git_commit": "cb1aac55e109bd7b8fe4a3d02c5c0008ba0dc3f2",
+  "git_commit": "b01c8c2d111a8e5886d0937293ddcac9449cb656",
   "git_dirty": true
 }

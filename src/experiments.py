@@ -1,28 +1,7 @@
-"""Experiment runners.
-
-Day 2 task 2: `run_tuning(config)`, the expanding-window hyperparameter selection, run ONCE.
-- Reads the Day 1 forecasting parquet with a read-time filter target_date <= 2017-12-31,
-  so 2018+ rows are never materialised; then keeps only the five core cities and the
-  tuning horizons, and asserts nothing later than the hard guard remains.
-- For each fold (2015->2016, 2015-16->2017) x candidate (c1..c6) x h in {1,3,7}: fits a
-  pooled direct LightGBM (lightgbm.base + candidate) on the fold's training rows and scores
-  the validation rows on `eval_mask` (MAE/RMSE/R2/n).
-- Selects the candidate with the lowest mean validation MAE over the 2 folds x 3 horizons;
-  ties go to the earliest candidate in grid order.
-There is deliberately no run-everything entry point.
-
-TODO(RQ1 - later day): leakage protocols A (random split + same-day AQI/co-pollutants, invalid demo),
-B (chronological + same-day), C (chronological + strictly causal). B vs C are different tasks.
-TODO(RQ2 - later day): pooled vs per-city vs leave-one-city-out (zero-shot).
-TODO(RQ3 - later day): quantile LightGBM vs CQR vs CQR+ACI; stress test 2020 reported separately.
-"""
 from __future__ import annotations
 
-import copy
-import hashlib
 import json
-from datetime import datetime, timezone
-from pathlib import Path
+from typing import cast
 
 import lightgbm
 import numpy as np
@@ -30,31 +9,127 @@ import pandas as pd
 
 from src import data_audit as da
 from src.features import feature_set
-from src.metrics import point_metrics
+from src.metrics import point_metrics, skill_score
 from src.models import STRUCTURAL_KEYS, candidate_params, merge_params
-from src.splits import LeakageError, assert_training_only, expanding_window_folds
+from src.splits import LeakageError, assert_training_only, expanding_window_folds, main_ranges, split_ranges
 
-CV_COLUMNS = ["candidate_id", "num_leaves", "min_child_samples", "fold", "horizon",
-              "n_train", "n_val", "mae", "rmse", "r2"]
-
-
-def config_hash(cfg: dict) -> str:
-    """sha256 of the config with `lightgbm.selected` removed (the frozen, predeclared part)."""
-    frozen = copy.deepcopy(cfg)
-    frozen.get("lightgbm", {}).pop("selected", None)
-    return hashlib.sha256(json.dumps(frozen, sort_keys=True, default=str).encode()).hexdigest()
+TUNING_CV_FILE = "tuning_cv_results.csv"
+SELECTED_FILE = "selected_params.json"
+CV_COLUMNS = ["candidate_id", "num_leaves", "min_child_samples", "fold", "horizon", "n_train", "n_val",
+              "mae", "rmse", "r2"]
+POINT_METHODS = ("lightgbm", "persistence", "seasonal_naive")
+RESULT_COLUMNS = ["method", "protocol", "scope", "city", "horizon", "n", "mae", "rmse", "r2", "skill_mae",
+                  "skill_rmse", "mask_type", "note"]
 
 
-def _abs(path) -> Path:
-    path = Path(path)
-    return path if path.is_absolute() else da.ROOT / path
+def assert_no_calibration(dates: pd.Series, cfg: dict, what: str) -> None:
+    _, (lo, hi), _ = main_ranges(cfg)
+    if pd.to_datetime(dates).between(lo, hi).any():
+        raise LeakageError(f"{what}: calibration-reserved TARGET rows present")
 
 
-def load_tuning_frame(cfg: dict, path=None) -> pd.DataFrame:
-    """Tuning rows only. 2018+ rows are filtered out AT READ TIME and never enter memory."""
-    path = _abs(path or cfg["paths"]["processed_dataset"])
+def read_without_calibration(path, cfg: dict) -> pd.DataFrame:
+    (tr_lo, tr_hi), _, (te_lo, te_hi) = main_ranges(cfg)
+    df = pd.read_parquet(path, filters=[[("target_date", ">=", tr_lo), ("target_date", "<=", tr_hi)],
+                                        [("target_date", ">=", te_lo), ("target_date", "<=", te_hi)]])
+    assert_no_calibration(df["target_date"], cfg, "loaded frame")
+    return df
+
+
+def forecast_frames(cfg: dict) -> tuple[pd.DataFrame, pd.DataFrame]:
+    df = read_without_calibration(da.resolve(cfg, "forecast_dataset"), cfg)
+    core = df["city"].astype(str).isin(cfg["cities"]["core"])
+    (tr_lo, tr_hi), _, (te_lo, te_hi) = main_ranges(cfg)
+    train = df.loc[core & df["target_date"].between(tr_lo, tr_hi)]
+    test = df.loc[core & df["target_date"].between(te_lo, te_hi)]
+    if not ((train["split_main"] == "train").all() and (test["split_main"] == "test").all()):
+        raise LeakageError("split labels disagree with target-date ranges")
+    if train["y_target"].isna().any() or test["y_target"].isna().any():
+        raise ValueError("forecasting rows must have observed targets")
+    return train, test
+
+
+def read_predictions(path, cfg: dict) -> pd.DataFrame:
+    head = pd.read_csv(path, nrows=0).columns
+    df = pd.read_csv(path, parse_dates=[c for c in ("origin_date", "target_date") if c in head])
+    assert_no_calibration(df["target_date"], cfg, path.name)
+    return df
+
+
+def score_methods(pred: pd.DataFrame) -> pd.DataFrame:
+    rows = []
+    pers = pred.loc[pred["method"] == "persistence"]
+    for method, m in pred.groupby("method", sort=False):
+        for mask_type in ("common_eval_mask", "own_full"):
+            scored = m.loc[m["eval_mask"] if mask_type == "common_eval_mask" else m["y_pred"].notna()]
+            for scope in ("overall", "city"):
+                keys = ["horizon"] + (["city"] if scope == "city" else [])
+                for gkey, g in scored.groupby(keys, observed=True, sort=True):
+                    rec = dict(zip(keys, gkey if isinstance(gkey, tuple) else (gkey,)))
+                    ref = pers.loc[pers["row_id"].isin(g["row_id"])]
+                    met, ref_met = point_metrics(g["y_true"], g["y_pred"]), point_metrics(ref["y_true"], ref["y_pred"])
+                    if ref_met["n"] != met["n"]:
+                        raise AssertionError("persistence reference rows differ from scored rows")
+                    rows.append({"method": method, "protocol": m["protocol"].iloc[0], "scope": scope,
+                                 "city": rec.get("city", "all"), "horizon": rec.get("horizon"), **met,
+                                 "skill_mae": skill_score(met["mae"], ref_met["mae"]),
+                                 "skill_rmse": skill_score(met["rmse"], ref_met["rmse"]), "mask_type": mask_type})
+    out = pd.DataFrame(rows)
+    out["note"] = np.where((out["method"] == "seasonal_naive") & (out["horizon"] == 7),
+                           "h=7: seasonal naive y[t+7-7]=y[t] equals persistence (expected)", "")
+    return out[RESULT_COLUMNS]
+
+
+def input_exposure(test: pd.DataFrame, cfg: dict, scheme: str) -> list[dict]:
+    """Test rows whose origin, or whose longest causal lookback, reaches into the calibration year."""
+    cal_lo, cal_hi = split_ranges(cfg, scheme)["calibration"]
+    f, year = cfg["features"], cal_lo.year
+    lookback = max(max(f["rolling_windows"]) - 1, max(f["lags"]) + int(cfg["preprocessing"]["ffill_limit"]))
+    out = []
+    for h, g in test.groupby("horizon", sort=True):
+        origin = pd.to_datetime(g["origin_date"])
+        reaches = (origin - pd.Timedelta(days=lookback) <= cal_hi) & (origin >= cal_lo)
+        out.append({"horizon": int(cast(int, h)), "n_test_rows": int(len(g)),
+                    f"n_origin_in_{year}": int(origin.between(cal_lo, cal_hi).sum()),
+                    f"n_lookback_reaches_{year}": int(reaches.sum()), "lookback_days": int(lookback)})
+    return out
+
+
+def _comparable(df: pd.DataFrame) -> pd.DataFrame:
+    out = {}
+    for c in df.columns:
+        s = df[c]
+        if pd.api.types.is_datetime64_any_dtype(s):
+            out[c] = s.astype("datetime64[ns]")
+        elif pd.api.types.is_bool_dtype(s):
+            out[c] = s.astype(bool)
+        elif pd.api.types.is_integer_dtype(s):
+            out[c] = s.astype("int64")
+        elif pd.api.types.is_float_dtype(s):
+            out[c] = s.astype("float64")
+        else:
+            out[c] = s.astype(str).astype(object)
+    return pd.DataFrame(out, index=df.index)
+
+
+def assert_frames_identical(left: pd.DataFrame, right: pd.DataFrame, keys: list[str], columns: list[str],
+                            what: str) -> None:
+    if len(left) != len(right):
+        raise AssertionError(f"{what}: length mismatch {len(left)} != {len(right)}")
+    for side, df in (("left", left), ("right", right)):
+        missing = [c for c in columns if c not in df.columns]
+        if missing:
+            raise AssertionError(f"{what}: {side} side missing columns {missing}")
+    a, b = (_comparable(d[columns]).sort_values(keys, kind="stable").reset_index(drop=True) for d in (left, right))
+    for c in columns:
+        x, y = a[c].to_numpy(), b[c].to_numpy()
+        if not (np.array_equal(x, y, equal_nan=True) if x.dtype.kind == "f" else bool((x == y).all())):
+            raise AssertionError(f"{what}: column {c!r} differs")
+
+
+def load_tuning_frame(cfg: dict) -> pd.DataFrame:
     max_date = pd.Timestamp(cfg["tuning"]["max_allowed_target_date"])
-    frame = pd.read_parquet(path, filters=[("target_date", "<=", max_date)])
+    frame = pd.read_parquet(da.resolve(cfg, "forecast_dataset"), filters=[("target_date", "<=", max_date)])
     cities = list(cfg["cities"][cfg["tuning"]["cities"]])
     frame = frame.loc[frame["city"].astype(str).isin(cities)
                       & frame["horizon"].isin(cfg["tuning"]["horizons"])].reset_index(drop=True)
@@ -67,93 +142,65 @@ def load_tuning_frame(cfg: dict, path=None) -> pd.DataFrame:
 
 
 def tune_frame(frame: pd.DataFrame, cfg: dict) -> pd.DataFrame:
-    """CV results (one row per fold x candidate x horizon). Raises on any row after the guard."""
-    assert_training_only(frame["target_date"], cfg)         # (a) refuses 2018+ rows outright
+    assert_training_only(frame["target_date"], cfg)
     if frame["y_target"].isna().any():
         raise ValueError("training/validation rows must have an observed target (never imputed)")
-    feats = feature_set(cfg, cfg["tuning"]["feature_set"])
-    eval_col = cfg["tuning"]["eval_rows"]
-    folds = expanding_window_folds(frame, cfg)
+    t = cfg["tuning"]
+    feats = feature_set(cfg, t["feature_set"])
     records = []
-    for fold_no, (tri, vai) in enumerate(folds, start=1):
+    for fold_no, (tri, vai) in enumerate(expanding_window_folds(frame, cfg), start=1):
         for cand in candidate_params(cfg):
-            params = merge_params(cfg, cand)
-            for h in cfg["tuning"]["horizons"]:
+            for h in t["horizons"]:
                 tr = frame.loc[tri][lambda d: d["horizon"] == h]
-                va = frame.loc[vai][lambda d: (d["horizon"] == h) & d[eval_col]]
+                va = frame.loc[vai][lambda d: (d["horizon"] == h) & d[t["eval_rows"]]]
                 assert_training_only(tr["target_date"], cfg)
                 assert_training_only(va["target_date"], cfg)
-                model = lightgbm.LGBMRegressor(**params)     # no eval set, no early stopping
-                model.fit(tr[feats], tr["y_target"])
-                m = point_metrics(va["y_target"], model.predict(va[feats]))
-                records.append({"candidate_id": cand["candidate_id"],
-                                **{k: cand[k] for k in STRUCTURAL_KEYS},
-                                "fold": fold_no, "horizon": h, "n_train": len(tr),
-                                "n_val": m["n"], "mae": m["mae"], "rmse": m["rmse"], "r2": m["r2"]})
+                model = lightgbm.LGBMRegressor(**merge_params(cfg, cand))
+                model.fit(cast(pd.DataFrame, tr[feats]), tr["y_target"])
+                m = point_metrics(va["y_target"], model.predict(cast(pd.DataFrame, va[feats])))
+                records.append({"candidate_id": cand["candidate_id"], **{k: cand[k] for k in STRUCTURAL_KEYS},
+                                "fold": fold_no, "horizon": h, "n_train": len(tr), "n_val": m["n"],
+                                "mae": m["mae"], "rmse": m["rmse"], "r2": m["r2"]})
     return pd.DataFrame(records, columns=CV_COLUMNS)
 
 
 def select_candidate(cv: pd.DataFrame, cfg: dict) -> tuple[dict, pd.DataFrame]:
-    """Lowest mean validation MAE over all folds x horizons; ties -> earliest in grid order."""
-    order = [c["candidate_id"] for c in candidate_params(cfg)]
-    expected_cells = len(cfg["tuning"]["folds"]) * len(cfg["tuning"]["horizons"])
+    cands = candidate_params(cfg)
+    order = [c["candidate_id"] for c in cands]
     counts = cv.groupby("candidate_id").size().reindex(order)
-    if counts.isna().any() or (counts != expected_cells).any():
+    if counts.isna().any() or (counts != len(cfg["tuning"]["folds"]) * len(cfg["tuning"]["horizons"])).any():
         raise ValueError("every candidate needs exactly one score per fold x horizon")
     mean_mae = cv.groupby("candidate_id")["mae"].mean().reindex(order)
     per_h = cv.pivot_table(index="candidate_id", columns="horizon", values="mae", aggfunc="mean")
-    per_h = per_h.reindex(order).add_prefix("mean_mae_h")
-    best_id = next(cid for cid in order if mean_mae[cid] == mean_mae.min())   # earliest tie
-    ranking = pd.DataFrame({"candidate_id": order}).merge(
-        pd.DataFrame(candidate_params(cfg)), on="candidate_id")
+    best_id = next(cid for cid in order if mean_mae[cid] == mean_mae.min())
+    ranking = pd.DataFrame(cands)
     ranking["mean_val_mae"] = mean_mae.to_numpy()
-    ranking = ranking.join(per_h.reset_index(drop=True))
+    ranking = ranking.join(per_h.reindex(order).add_prefix("mean_mae_h").reset_index(drop=True))
     ranking["grid_order"] = range(1, len(order) + 1)
     ranking["rank"] = ranking.sort_values(["mean_val_mae", "grid_order"]).index.argsort() + 1
     ranking["selected"] = ranking["candidate_id"] == best_id
-    selected = next(c for c in candidate_params(cfg) if c["candidate_id"] == best_id)
-    return selected, ranking
+    return next(c for c in cands if c["candidate_id"] == best_id), ranking
 
 
-def run_tuning(config: dict, data_path=None) -> dict:
-    """Day 2 task 2. Loads the training-only frame, tunes, writes outputs/models/*. Returns results."""
-    cfg = config
-    frame = load_tuning_frame(cfg, data_path)
+def run_tuning(cfg: dict) -> dict:
+    frame = load_tuning_frame(cfg)
     cv = tune_frame(frame, cfg)
     selected, ranking = select_candidate(cv, cfg)
-
-    cv_path = _abs(cfg["tuning"]["cv_results_file"])
-    sel_path = _abs(cfg["tuning"]["selected_params_file"])
-    cv_path.parent.mkdir(parents=True, exist_ok=True)
-    cv.to_csv(cv_path, index=False)
-    meta = da.build_metadata(cv, cv_path.name, cfg, "src.experiments.run_tuning",
-                             notes="Expanding-window CV inside 2015-2017 only; eval_mask rows.")
-    da.write_sidecar(meta, cv_path)
-    payload = {
-        "selected_candidate_id": selected["candidate_id"],
-        "selected_structural_params": {k: selected[k] for k in STRUCTURAL_KEYS},
-        "full_params": merge_params(cfg, selected),
-        "ranking": json.loads(ranking.to_json(orient="records")),
-        "selection_metric": cfg["tuning"]["selection_metric"],
-        "tie_break": cfg["tuning"]["tie_break"],
-        "folds": cfg["tuning"]["folds"],
-        "horizons": cfg["tuning"]["horizons"],
-        "feature_set": cfg["tuning"]["feature_set"],
-        "features": feature_set(cfg, cfg["tuning"]["feature_set"]),
-        "cities": list(cfg["cities"][cfg["tuning"]["cities"]]),
-        "tuning_frame": {"n_rows": int(len(frame)),
-                         "min_target_date": str(frame["target_date"].min().date()),
-                         "max_target_date": str(frame["target_date"].max().date())},
-        "config_hash": config_hash(cfg),
-        "dataset_sha256": meta["dataset_sha256"],
-        "processed_dataset_sha256": da.sha256_file(_abs(data_path or cfg["paths"]["processed_dataset"])),
-        "kaggle_version": cfg["data"]["kaggle_version"],
-        "versions": {"lightgbm": lightgbm.__version__, "numpy": np.__version__,
-                     "pandas": pd.__version__},
-        "seed": cfg["seed"],
-        "created_utc": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-        "git_commit": meta["git_commit"],
-    }
-    sel_path.write_text(json.dumps(payload, indent=2, default=str))
-    return {"frame": frame, "cv": cv, "ranking": ranking, "selected": selected,
-            "payload": payload, "paths": (cv_path, sel_path)}
+    if selected != {**cfg["lightgbm"]["selected"]}:
+        raise ValueError(f"tuning selected {selected}, but the config fixes {cfg['lightgbm']['selected']}")
+    models_dir = da.output_dirs(cfg)["models"]
+    cv_path = da.write_csv(cv, models_dir / TUNING_CV_FILE, cfg, "src.experiments.run_tuning",
+                           "Expanding-window CV inside 2015-2017 only; eval_mask rows.")
+    payload = {"selected_candidate_id": selected["candidate_id"],
+               "selected_structural_params": {k: selected[k] for k in STRUCTURAL_KEYS},
+               "full_params": merge_params(cfg, selected), "ranking": json.loads(ranking.to_json(orient="records")),
+               "folds": cfg["tuning"]["folds"], "horizons": cfg["tuning"]["horizons"],
+               "feature_set": cfg["tuning"]["feature_set"], "features": feature_set(cfg, cfg["tuning"]["feature_set"]),
+               "cities": list(cfg["cities"][cfg["tuning"]["cities"]]),
+               "tuning_frame": {"n_rows": int(len(frame)), "min_target_date": str(frame["target_date"].min().date()),
+                                "max_target_date": str(frame["target_date"].max().date())},
+               "processed_dataset_sha256": da.sha256_file(da.resolve(cfg, "forecast_dataset")),
+               **da.metadata(cv, SELECTED_FILE, cfg, "src.experiments.run_tuning")}
+    (models_dir / SELECTED_FILE).write_text(json.dumps(payload, indent=2, default=str))
+    return {"frame": frame, "cv": cv, "ranking": ranking, "selected": selected, "payload": payload,
+            "paths": (cv_path, models_dir / SELECTED_FILE)}

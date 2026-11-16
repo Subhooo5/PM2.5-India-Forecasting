@@ -1,0 +1,998 @@
+{
+  "file": "uncertainty_held_out_city.csv",
+  "dataset_sha256": "0d84b21c3e4878bbad8df362f2ab05f61ad959538dddf5918e714077ed3c1847",
+  "kaggle_dataset": "Kaggle: Air Quality Data in India (2015-2020), by Vopani (rohanrao/air-quality-data-in-india)",
+  "kaggle_version": 12,
+  "config_sha256": "f043998ae78033b8f40a8b044e1013dbd49f6aef51fdb9831384a76a39ef8d08",
+  "config_hash": "16c3e27d0181541fd9baaadd70a02f26c86957f22ae7830ab7a1ba9d0d352531",
+  "selected_candidate": "c2",
+  "generator": "src.uncertainty.run",
+  "created_utc": "2026-11-16T08:59:31+00:00",
+  "n_rows": 105,
+  "columns": [
+    "setting",
+    "method",
+    "city",
+    "horizon",
+    "n",
+    "nominal",
+    "picp",
+    "coverage_gap",
+    "mpiw",
+    "winkler",
+    "low_n"
+  ],
+  "seed": 42,
+  "versions": {
+    "lightgbm": "4.7.0",
+    "numpy": "2.4.6",
+    "pandas": "3.1.1"
+  },
+  "notes": "Marginal results on 2019 test rows that are eval_mask and calibration_ready; see docs/design.md.",
+  "git_commit": "b01c8c2d111a8e5886d0937293ddcac9449cb656",
+  "git_dirty": true,
+  "uncertainty_config_hash": "236cbcdfe934405285bf9c2483ac7cc4c318bea6f3a5ec71dd51d6bf2ff2e572",
+  "q_hat": {
+    "1": {
+      "q_hat": 2.455526040504786,
+      "n_cal": 1798
+    },
+    "3": {
+      "q_hat": 4.66802890291013,
+      "n_cal": 1799
+    },
+    "7": {
+      "q_hat": 5.1987995225483985,
+      "n_cal": 1799
+    }
+  },
+  "held_out_q_hat": {
+    "Delhi": {
+      "source": {
+        "1": {
+          "q_hat": 2.814553787244936,
+          "n_cal": 1433
+        },
+        "3": {
+          "q_hat": 4.533899039867961,
+          "n_cal": 1434
+        },
+        "7": {
+          "q_hat": 5.8732693305831845,
+          "n_cal": 1434
+        }
+      },
+      "local": {
+        "1": {
+          "q_hat": 5.638327739321284,
+          "n_cal": 365
+        },
+        "3": {
+          "q_hat": 11.948698713301354,
+          "n_cal": 365
+        },
+        "7": {
+          "q_hat": 9.425863007531206,
+          "n_cal": 365
+        }
+      }
+    },
+    "Lucknow": {
+      "source": {
+        "1": {
+          "q_hat": 2.773383867846402,
+          "n_cal": 1433
+        },
+        "3": {
+          "q_hat": 4.368269117729779,
+          "n_cal": 1434
+        },
+        "7": {
+          "q_hat": 5.003526696788498,
+          "n_cal": 1434
+        }
+      },
+      "local": {
+        "1": {
+          "q_hat": 6.394577454799403,
+          "n_cal": 365
+        },
+        "3": {
+          "q_hat": 11.668633418554911,
+          "n_cal": 365
+        },
+        "7": {
+          "q_hat": 16.66924331171785,
+          "n_cal": 365
+        }
+      }
+    },
+    "Chennai": {
+      "source": {
+        "1": {
+          "q_hat": 1.968843112861535,
+          "n_cal": 1433
+        },
+        "3": {
+          "q_hat": 4.474963301466051,
+          "n_cal": 1434
+        },
+        "7": {
+          "q_hat": 5.229711884807301,
+          "n_cal": 1434
+        }
+      },
+      "local": {
+        "1": {
+          "q_hat": 4.142847407114147,
+          "n_cal": 365
+        },
+        "3": {
+          "q_hat": 7.200342503898632,
+          "n_cal": 365
+        },
+        "7": {
+          "q_hat": 8.159567622558122,
+          "n_cal": 365
+        }
+      }
+    },
+    "Hyderabad": {
+      "source": {
+        "1": {
+          "q_hat": 4.586697354623967,
+          "n_cal": 1433
+        },
+        "3": {
+          "q_hat": 7.601866320178274,
+          "n_cal": 1434
+        },
+        "7": {
+          "q_hat": 8.046706936272333,
+          "n_cal": 1434
+        }
+      },
+      "local": {
+        "1": {
+          "q_hat": -0.412063831632409,
+          "n_cal": 365
+        },
+        "3": {
+          "q_hat": 0.7489046257825116,
+          "n_cal": 365
+        },
+        "7": {
+          "q_hat": 1.0507696434227825,
+          "n_cal": 365
+        }
+      }
+    },
+    "Bengaluru": {
+      "source": {
+        "1": {
+          "q_hat": 2.7404892547510897,
+          "n_cal": 1460
+        },
+        "3": {
+          "q_hat": 6.250276390961549,
+          "n_cal": 1460
+        },
+        "7": {
+          "q_hat": 7.482869973260932,
+          "n_cal": 1460
+        }
+      },
+      "local": {
+        "1": {
+          "q_hat": 3.679749610205114,
+          "n_cal": 338
+        },
+        "3": {
+          "q_hat": 7.46738300376329,
+          "n_cal": 339
+        },
+        "7": {
+          "q_hat": 8.179504018878212,
+          "n_cal": 339
+        }
+      }
+    }
+  },
+  "checks": {
+    "held_out_intervals_test_rows": {
+      "raw_loco": [
+        {
+          "city": "Bengaluru",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 4.4947909476,
+          "width_median": 27.8334153935,
+          "width_max": 189.1924040189,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Bengaluru",
+          "horizon": 3,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 4.9726981799,
+          "width_median": 47.6775248445,
+          "width_max": 140.1664134546,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Bengaluru",
+          "horizon": 7,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 13.8988293102,
+          "width_median": 43.8675496506,
+          "width_max": 135.060628699,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Chennai",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 8.5982725257,
+          "width_median": 34.7268410807,
+          "width_max": 317.7872173223,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Chennai",
+          "horizon": 3,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 8.6156191436,
+          "width_median": 47.3640007974,
+          "width_max": 161.2655872304,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Chennai",
+          "horizon": 7,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 13.9490945937,
+          "width_median": 52.0937764378,
+          "width_max": 136.8521076073,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Delhi",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 16.0884873824,
+          "width_median": 65.0646182085,
+          "width_max": 409.3301729449,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Delhi",
+          "horizon": 3,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 19.8230269024,
+          "width_median": 81.912032727,
+          "width_max": 319.7053488957,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Delhi",
+          "horizon": 7,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 19.1085321659,
+          "width_median": 87.5361167206,
+          "width_max": 270.3792280032,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Hyderabad",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 3.2236306231,
+          "width_median": 28.1410927967,
+          "width_max": 85.3817815249,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Hyderabad",
+          "horizon": 3,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 1.7714928581,
+          "width_median": 35.4318943562,
+          "width_max": 76.7890711156,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Hyderabad",
+          "horizon": 7,
+          "n": 365,
+          "n_crossed": 1,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": -0.1927159789,
+          "width_median": 45.4303276818,
+          "width_max": 102.3289529586,
+          "n_width_le0": 1,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Lucknow",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 15.0690781914,
+          "width_median": 67.481203299,
+          "width_max": 359.5954752938,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Lucknow",
+          "horizon": 3,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 21.5798837597,
+          "width_median": 76.6789125106,
+          "width_max": 432.1866856295,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Lucknow",
+          "horizon": 7,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 23.7885957917,
+          "width_median": 84.2632292942,
+          "width_max": 424.6965217202,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        }
+      ],
+      "cqr_source": [
+        {
+          "city": "Bengaluru",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 9.9757694571,
+          "width_median": 33.314393903,
+          "width_max": 194.6733825284,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Bengaluru",
+          "horizon": 3,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 17.4732509618,
+          "width_median": 60.1780776264,
+          "width_max": 152.6669662365,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Bengaluru",
+          "horizon": 7,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 28.8645692567,
+          "width_median": 58.8332895971,
+          "width_max": 150.0263686456,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 5
+        },
+        {
+          "city": "Chennai",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 12.5359587515,
+          "width_median": 38.6645273064,
+          "width_max": 321.724903548,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Chennai",
+          "horizon": 3,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 17.5655457465,
+          "width_median": 56.3139274004,
+          "width_max": 170.2155138333,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Chennai",
+          "horizon": 7,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 24.4085183634,
+          "width_median": 62.5532002074,
+          "width_max": 147.3115313769,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Delhi",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 21.7175949569,
+          "width_median": 70.693725783,
+          "width_max": 414.9592805194,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Delhi",
+          "horizon": 3,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 28.8908249821,
+          "width_median": 90.9798308068,
+          "width_max": 328.7731469754,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Delhi",
+          "horizon": 7,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 30.855070827,
+          "width_median": 99.2826553818,
+          "width_max": 282.1257666644,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Hyderabad",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 12.3970253324,
+          "width_median": 37.314487506,
+          "width_max": 94.5551762342,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Hyderabad",
+          "horizon": 3,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 16.9752254985,
+          "width_median": 50.6356269966,
+          "width_max": 91.992803756,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Hyderabad",
+          "horizon": 7,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 15.9006978936,
+          "width_median": 61.5237415544,
+          "width_max": 118.4223668312,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 1
+        },
+        {
+          "city": "Lucknow",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 20.615845927,
+          "width_median": 73.0279710347,
+          "width_max": 365.1422430295,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Lucknow",
+          "horizon": 3,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 30.3164219951,
+          "width_median": 85.415450746,
+          "width_max": 440.923223865,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Lucknow",
+          "horizon": 7,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 33.7956491852,
+          "width_median": 94.2702826878,
+          "width_max": 434.7035751137,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        }
+      ],
+      "aci_source": [
+        {
+          "city": "Bengaluru",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 8.1666717417,
+          "width_median": 33.5912050324,
+          "width_max": 202.0642961872,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Bengaluru",
+          "horizon": 3,
+          "n": 363,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 7.072594927,
+          "width_median": 56.7510787961,
+          "width_max": 151.7809574228,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 3
+        },
+        {
+          "city": "Bengaluru",
+          "horizon": 7,
+          "n": 359,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 16.2308438733,
+          "width_median": 55.5997333778,
+          "width_max": 173.3138619513,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 28
+        },
+        {
+          "city": "Chennai",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 15.884778565,
+          "width_median": 45.4745006434,
+          "width_max": 383.5845569154,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 1
+        },
+        {
+          "city": "Chennai",
+          "horizon": 3,
+          "n": 363,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 18.5120106083,
+          "width_median": 61.1790161774,
+          "width_max": 217.1535341943,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 19
+        },
+        {
+          "city": "Chennai",
+          "horizon": 7,
+          "n": 359,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 23.9849041413,
+          "width_median": 70.4965087379,
+          "width_max": 205.7239044237,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 31
+        },
+        {
+          "city": "Delhi",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 30.9340066876,
+          "width_median": 91.3269580276,
+          "width_max": 450.3340439852,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 2
+        },
+        {
+          "city": "Delhi",
+          "horizon": 3,
+          "n": 363,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 34.7413263893,
+          "width_median": 108.1699012771,
+          "width_max": 378.3065632723,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 7
+        },
+        {
+          "city": "Delhi",
+          "horizon": 7,
+          "n": 359,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 33.4116972033,
+          "width_median": 116.6506978506,
+          "width_max": 358.2231998669,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 4
+        },
+        {
+          "city": "Hyderabad",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 8.7259564513,
+          "width_median": 29.1871695362,
+          "width_max": 89.0309160209,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Hyderabad",
+          "horizon": 3,
+          "n": 363,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 9.3350816477,
+          "width_median": 43.5971216141,
+          "width_max": 86.1163120141,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Hyderabad",
+          "horizon": 7,
+          "n": 359,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 10.2337988202,
+          "width_median": 53.4058825553,
+          "width_max": 107.2134759852,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 22
+        },
+        {
+          "city": "Lucknow",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 17.9559188658,
+          "width_median": 79.6523320624,
+          "width_max": 365.6989772051,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Lucknow",
+          "horizon": 3,
+          "n": 363,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 28.7624528274,
+          "width_median": 98.3738525551,
+          "width_max": 444.563264802,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Lucknow",
+          "horizon": 7,
+          "n": 359,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 34.049313448,
+          "width_median": 114.2494308492,
+          "width_max": 444.2756977228,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 8
+        }
+      ],
+      "cqr_local": [
+        {
+          "city": "Bengaluru",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 11.854290168,
+          "width_median": 35.1929146139,
+          "width_max": 196.5519032393,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Bengaluru",
+          "horizon": 3,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 19.9074641874,
+          "width_median": 62.612290852,
+          "width_max": 155.1011794622,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Bengaluru",
+          "horizon": 7,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 30.2578373479,
+          "width_median": 60.2265576884,
+          "width_max": 151.4196367368,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 9
+        },
+        {
+          "city": "Chennai",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 16.88396734,
+          "width_median": 43.0125358949,
+          "width_max": 326.0729121365,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Chennai",
+          "horizon": 3,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 23.0163041514,
+          "width_median": 61.7646858052,
+          "width_max": 175.6662722382,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Chennai",
+          "horizon": 7,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 30.2682298389,
+          "width_median": 68.4129116829,
+          "width_max": 153.1712428524,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Delhi",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 27.365142861,
+          "width_median": 76.3412736871,
+          "width_max": 420.6068284235,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Delhi",
+          "horizon": 3,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 43.720424329,
+          "width_median": 105.8094301536,
+          "width_max": 343.6027463223,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 2
+        },
+        {
+          "city": "Delhi",
+          "horizon": 7,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 37.9602581809,
+          "width_median": 106.3878427357,
+          "width_max": 289.2309540183,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 1
+        },
+        {
+          "city": "Hyderabad",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 2.3995029599,
+          "width_median": 27.3169651335,
+          "width_max": 84.5576538616,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Hyderabad",
+          "horizon": 3,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 3.2693021097,
+          "width_median": 36.9297036078,
+          "width_max": 78.2868803672,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Hyderabad",
+          "horizon": 7,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 1.9088233079,
+          "width_median": 47.5318669687,
+          "width_max": 104.4304922455,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Lucknow",
+          "horizon": 1,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 27.8582331009,
+          "width_median": 80.2703582086,
+          "width_max": 372.3846302034,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 0
+        },
+        {
+          "city": "Lucknow",
+          "horizon": 3,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 44.9171505968,
+          "width_median": 100.0161793477,
+          "width_max": 455.5239524666,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 1
+        },
+        {
+          "city": "Lucknow",
+          "horizon": 7,
+          "n": 365,
+          "n_crossed": 0,
+          "n_nan": 0,
+          "n_inf": 0,
+          "width_min": 57.1270824151,
+          "width_median": 117.6017159176,
+          "width_max": 458.0350083436,
+          "n_width_le0": 0,
+          "n_lower_below_zero": 18
+        }
+      ]
+    },
+    "n_test_rows_not_calibration_ready": {
+      "1": 0,
+      "3": 10,
+      "7": 30
+    }
+  }
+}

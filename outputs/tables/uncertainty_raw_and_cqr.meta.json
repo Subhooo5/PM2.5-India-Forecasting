@@ -1,0 +1,51 @@
+{
+  "file": "uncertainty_raw_and_cqr.csv",
+  "dataset_sha256": "0d84b21c3e4878bbad8df362f2ab05f61ad959538dddf5918e714077ed3c1847",
+  "kaggle_dataset": "Kaggle: Air Quality Data in India (2015-2020), by Vopani (rohanrao/air-quality-data-in-india)",
+  "kaggle_version": 12,
+  "config_sha256": "f043998ae78033b8f40a8b044e1013dbd49f6aef51fdb9831384a76a39ef8d08",
+  "config_hash": "16c3e27d0181541fd9baaadd70a02f26c86957f22ae7830ab7a1ba9d0d352531",
+  "selected_candidate": "c2",
+  "generator": "src.uncertainty.run",
+  "created_utc": "2026-11-16T08:59:31+00:00",
+  "n_rows": 38,
+  "columns": [
+    "method",
+    "scope",
+    "city",
+    "horizon",
+    "picp",
+    "mpiw",
+    "winkler",
+    "n",
+    "nominal",
+    "n_crossed",
+    "n_lower_below_zero",
+    "q_hat",
+    "n_cal"
+  ],
+  "seed": 42,
+  "versions": {
+    "lightgbm": "4.7.0",
+    "numpy": "2.4.6",
+    "pandas": "3.1.1"
+  },
+  "notes": "Marginal results on 2019 test rows that are eval_mask and calibration_ready; see docs/design.md.",
+  "git_commit": "b01c8c2d111a8e5886d0937293ddcac9449cb656",
+  "git_dirty": true,
+  "uncertainty_config_hash": "236cbcdfe934405285bf9c2483ac7cc4c318bea6f3a5ec71dd51d6bf2ff2e572",
+  "q_hat": {
+    "1": {
+      "q_hat": 2.455526040504786,
+      "n_cal": 1798
+    },
+    "3": {
+      "q_hat": 4.66802890291013,
+      "n_cal": 1799
+    },
+    "7": {
+      "q_hat": 5.1987995225483985,
+      "n_cal": 1799
+    }
+  }
+}

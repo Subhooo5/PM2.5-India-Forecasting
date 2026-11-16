@@ -1,0 +1,26 @@
+{
+  "file": "result_manifest.csv",
+  "dataset_sha256": "0d84b21c3e4878bbad8df362f2ab05f61ad959538dddf5918e714077ed3c1847",
+  "kaggle_dataset": "Kaggle: Air Quality Data in India (2015-2020), by Vopani (rohanrao/air-quality-data-in-india)",
+  "kaggle_version": 12,
+  "config_sha256": "f043998ae78033b8f40a8b044e1013dbd49f6aef51fdb9831384a76a39ef8d08",
+  "config_hash": "16c3e27d0181541fd9baaadd70a02f26c86957f22ae7830ab7a1ba9d0d352531",
+  "selected_candidate": "c2",
+  "generator": "src.stress.write_manifest",
+  "created_utc": "2026-11-16T09:05:59+00:00",
+  "n_rows": 252,
+  "columns": [
+    "path",
+    "bytes",
+    "sha256"
+  ],
+  "seed": 42,
+  "versions": {
+    "lightgbm": "4.7.0",
+    "numpy": "2.4.6",
+    "pandas": "3.1.1"
+  },
+  "notes": "Snapshot of the files after a full run, not a freeze; sidecars carry timestamps.",
+  "git_commit": "b01c8c2d111a8e5886d0937293ddcac9449cb656",
+  "git_dirty": true
+}

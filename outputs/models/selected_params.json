@@ -95,8 +95,6 @@
       "selected": false
     }
   ],
-  "selection_metric": "mean_val_mae",
-  "tie_break": "earliest_in_grid_order",
   "folds": [
     {
       "train_targets": "2015",
@@ -146,16 +144,36 @@
     "min_target_date": "2015-01-02",
     "max_target_date": "2017-12-31"
   },
-  "config_hash": "58b19763dbb68c204aa9e61abb9268fe386928e65941cb45235e27ed37cbc35e",
+  "processed_dataset_sha256": "ce5d730bf8e2db45d11bbd3f0253e49391b1159055bcfd4004a6e154348025c6",
+  "file": "selected_params.json",
   "dataset_sha256": "0d84b21c3e4878bbad8df362f2ab05f61ad959538dddf5918e714077ed3c1847",
-  "processed_dataset_sha256": "879a1b41d2bc5a37b1e53de2052db0a6b87a51f11f1a083fa26cca1fc83b8776",
+  "kaggle_dataset": "Kaggle: Air Quality Data in India (2015-2020), by Vopani (rohanrao/air-quality-data-in-india)",
   "kaggle_version": 12,
+  "config_sha256": "f043998ae78033b8f40a8b044e1013dbd49f6aef51fdb9831384a76a39ef8d08",
+  "config_hash": "16c3e27d0181541fd9baaadd70a02f26c86957f22ae7830ab7a1ba9d0d352531",
+  "selected_candidate": "c2",
+  "generator": "src.experiments.run_tuning",
+  "created_utc": "2026-11-16T08:59:13+00:00",
+  "n_rows": 36,
+  "columns": [
+    "candidate_id",
+    "num_leaves",
+    "min_child_samples",
+    "fold",
+    "horizon",
+    "n_train",
+    "n_val",
+    "mae",
+    "rmse",
+    "r2"
+  ],
+  "seed": 42,
   "versions": {
     "lightgbm": "4.7.0",
     "numpy": "2.4.6",
     "pandas": "3.1.1"
   },
-  "seed": 42,
-  "created_utc": "2026-11-14T09:25:24+00:00",
-  "git_commit": "cb1aac55e109bd7b8fe4a3d02c5c0008ba0dc3f2"
+  "notes": "",
+  "git_commit": "b01c8c2d111a8e5886d0937293ddcac9449cb656",
+  "git_dirty": true
 }

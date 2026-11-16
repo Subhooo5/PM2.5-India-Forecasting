@@ -1,0 +1,38 @@
+{
+  "file": "leakage_protocol_a_seeds.csv",
+  "dataset_sha256": "0d84b21c3e4878bbad8df362f2ab05f61ad959538dddf5918e714077ed3c1847",
+  "kaggle_dataset": "Kaggle: Air Quality Data in India (2015-2020), by Vopani (rohanrao/air-quality-data-in-india)",
+  "kaggle_version": 12,
+  "config_sha256": "f043998ae78033b8f40a8b044e1013dbd49f6aef51fdb9831384a76a39ef8d08",
+  "config_hash": "16c3e27d0181541fd9baaadd70a02f26c86957f22ae7830ab7a1ba9d0d352531",
+  "selected_candidate": "c2",
+  "generator": "src.leakage_protocols.run_protocol_a",
+  "created_utc": "2026-11-16T08:59:15+00:00",
+  "n_rows": 14,
+  "columns": [
+    "seed",
+    "subset",
+    "n_train",
+    "n_test",
+    "mae",
+    "rmse",
+    "r2",
+    "n"
+  ],
+  "seed": 42,
+  "versions": {
+    "lightgbm": "4.7.0",
+    "numpy": "2.4.6",
+    "pandas": "3.1.1"
+  },
+  "notes": "Seeds vary only the A split; sd = sample standard deviation.",
+  "git_commit": "b01c8c2d111a8e5886d0937293ddcac9449cb656",
+  "git_dirty": true,
+  "seeds": [
+    42,
+    43,
+    44,
+    45,
+    46
+  ]
+}
